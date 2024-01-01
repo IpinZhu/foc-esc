@@ -1,0 +1,31 @@
+{
+    "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools",
+    "configurations":[
+        {
+            "name": "arm-none-eabi",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "Core/Inc",
+                "Drivers/STM32G4xx_HAL_Driver/Inc",
+                "Drivers/STM32G4xx_HAL_Driver/Inc/Legacy",
+                "Drivers/CMSIS/Device/ST/STM32G4xx/Include",
+                "Drivers/CMSIS/Include",
+                "Middlewares/ST/ARM/DSP/Inc",
+                "${workspaceFolder}/Drivers/STM32G4xx_HAL_Driver/Inc",
+                "${workspaceFolder}/Drivers/CMSIS/DSP/Include"
+            ]
+        }
+    ],
+    "files.associations": {
+        "arm_math.h": "c",
+        "arm_const_structs.h": "c",
+        "stm32g4xx_hal.h": "c",
+        "main.h": "c",
+        "test.h": "c",
+        "tim.h": "c",
+        "adc.h": "c",
+        "usart.h": "c",
+        "svpwm.h": "c"
+    }
+
+}

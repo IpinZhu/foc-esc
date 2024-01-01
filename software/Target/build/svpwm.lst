@@ -1,0 +1,1278 @@
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 1
+
+
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu fpv4-sp-d16
+   4              		.eabi_attribute 27, 1
+   5              		.eabi_attribute 28, 1
+   6              		.eabi_attribute 20, 1
+   7              		.eabi_attribute 21, 1
+   8              		.eabi_attribute 23, 3
+   9              		.eabi_attribute 24, 1
+  10              		.eabi_attribute 25, 1
+  11              		.eabi_attribute 26, 1
+  12              		.eabi_attribute 30, 1
+  13              		.eabi_attribute 34, 1
+  14              		.eabi_attribute 18, 4
+  15              		.file	"svpwm.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.file 1 "Core/Src/svpwm.c"
+  20              		.global	__aeabi_f2d
+  21              		.global	__aeabi_ddiv
+  22              		.global	__aeabi_d2f
+  23              		.global	__aeabi_dmul
+  24              		.global	__aeabi_dadd
+  25              		.global	__aeabi_dsub
+  26              		.section	.text.Svpwm,"ax",%progbits
+  27              		.align	1
+  28              		.global	Svpwm
+  29              		.syntax unified
+  30              		.thumb
+  31              		.thumb_func
+  33              	Svpwm:
+  34              	.LVL0:
+  35              	.LFB370:
+   1:Core/Src/svpwm.c **** /**
+   2:Core/Src/svpwm.c ****  * @file svpwm.c
+   3:Core/Src/svpwm.c ****  * @author IpinZhu (zhuyiping742@gmail.com)
+   4:Core/Src/svpwm.c ****  * @brief SVPWM generator
+   5:Core/Src/svpwm.c ****  * @version 0.1
+   6:Core/Src/svpwm.c ****  * @date 2023-12-29
+   7:Core/Src/svpwm.c ****  *
+   8:Core/Src/svpwm.c ****  * @copyright Copyright (c) 2023
+   9:Core/Src/svpwm.c ****  *
+  10:Core/Src/svpwm.c ****  */
+  11:Core/Src/svpwm.c **** 
+  12:Core/Src/svpwm.c **** #include "svpwm.h"
+  13:Core/Src/svpwm.c **** 
+  14:Core/Src/svpwm.c **** /// @brief 七段式Svpwm生成函数
+  15:Core/Src/svpwm.c **** /// @param ualpha 期望alpha电压
+  16:Core/Src/svpwm.c **** /// @param ubeta 期望beta电压
+  17:Core/Src/svpwm.c **** /// @param Udc  采样得到Udc
+  18:Core/Src/svpwm.c **** void Svpwm(float32_t ualpha, float32_t ubeta, float32_t Udc)
+  19:Core/Src/svpwm.c **** {
+  36              		.loc 1 19 1 view -0
+  37              		.cfi_startproc
+  38              		@ args = 0, pretend = 0, frame = 8
+  39              		@ frame_needed = 0, uses_anonymous_args = 0
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 2
+
+
+  40              		.loc 1 19 1 is_stmt 0 view .LVU1
+  41 0000 2DE9F04F 		push	{r4, r5, r6, r7, r8, r9, r10, fp, lr}
+  42              	.LCFI0:
+  43              		.cfi_def_cfa_offset 36
+  44              		.cfi_offset 4, -36
+  45              		.cfi_offset 5, -32
+  46              		.cfi_offset 6, -28
+  47              		.cfi_offset 7, -24
+  48              		.cfi_offset 8, -20
+  49              		.cfi_offset 9, -16
+  50              		.cfi_offset 10, -12
+  51              		.cfi_offset 11, -8
+  52              		.cfi_offset 14, -4
+  53 0004 2DED048B 		vpush.64	{d8, d9}
+  54              	.LCFI1:
+  55              		.cfi_def_cfa_offset 52
+  56              		.cfi_offset 80, -52
+  57              		.cfi_offset 81, -48
+  58              		.cfi_offset 82, -44
+  59              		.cfi_offset 83, -40
+  60 0008 83B0     		sub	sp, sp, #12
+  61              	.LCFI2:
+  62              		.cfi_def_cfa_offset 64
+  63 000a B0EE408A 		vmov.f32	s16, s0
+  64 000e B0EE609A 		vmov.f32	s18, s1
+  65 0012 11EE100A 		vmov	r0, s2
+  66 0016 0024     		movs	r4, #0
+  67 0018 0194     		str	r4, [sp, #4]
+  68 001a 2546     		mov	r5, r4
+  20:Core/Src/svpwm.c ****     float32_t WX, WY, WZ, WW;
+  69              		.loc 1 20 5 is_stmt 1 view .LVU2
+  21:Core/Src/svpwm.c ****     uint16_t Tx, Ty, T0;
+  70              		.loc 1 21 5 view .LVU3
+  22:Core/Src/svpwm.c ****     uint16_t chan1, chan2, chan3; // 定时器上占空比
+  71              		.loc 1 22 5 view .LVU4
+  23:Core/Src/svpwm.c **** 
+  24:Core/Src/svpwm.c ****     // 时间计算
+  25:Core/Src/svpwm.c ****     WW = (SQRT3 * TS) / Udc;
+  72              		.loc 1 25 5 view .LVU5
+  73              		.loc 1 25 23 is_stmt 0 view .LVU6
+  74 001c FFF7FEFF 		bl	__aeabi_f2d
+  75              	.LVL1:
+  76              		.loc 1 25 23 view .LVU7
+  77 0020 0246     		mov	r2, r0
+  78 0022 0B46     		mov	r3, r1
+  79 0024 DDA1     		adr	r1, .L41+4
+  80 0026 D1E90001 		ldrd	r0, [r1]
+  81 002a FFF7FEFF 		bl	__aeabi_ddiv
+  82              	.LVL2:
+  83              		.loc 1 25 8 view .LVU8
+  84 002e FFF7FEFF 		bl	__aeabi_d2f
+  85              	.LVL3:
+  86 0032 08EE900A 		vmov	s17, r0
+  87              	.LVL4:
+  26:Core/Src/svpwm.c ****     WX = WW * ualpha;
+  88              		.loc 1 26 5 is_stmt 1 view .LVU9
+  89              		.loc 1 26 8 is_stmt 0 view .LVU10
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 3
+
+
+  90 0036 68EE888A 		vmul.f32	s17, s17, s16
+  91              	.LVL5:
+  27:Core/Src/svpwm.c ****     WY = WW * ((SQRT3 / 2) * ualpha + (ubeta / 2));
+  92              		.loc 1 27 5 is_stmt 1 view .LVU11
+  93              		.loc 1 27 13 is_stmt 0 view .LVU12
+  94 003a FFF7FEFF 		bl	__aeabi_f2d
+  95              	.LVL6:
+  96              		.loc 1 27 13 view .LVU13
+  97 003e 0646     		mov	r6, r0
+  98 0040 0F46     		mov	r7, r1
+  99              		.loc 1 27 28 view .LVU14
+ 100 0042 18EE100A 		vmov	r0, s16
+ 101 0046 FFF7FEFF 		bl	__aeabi_f2d
+ 102              	.LVL7:
+ 103 004a D6A3     		adr	r3, .L41+12
+ 104 004c D3E90023 		ldrd	r2, [r3]
+ 105 0050 FFF7FEFF 		bl	__aeabi_dmul
+ 106              	.LVL8:
+ 107 0054 8046     		mov	r8, r0
+ 108 0056 8946     		mov	r9, r1
+ 109              		.loc 1 27 46 view .LVU15
+ 110 0058 F6EE007A 		vmov.f32	s15, #5.0e-1
+ 111 005c 69EE277A 		vmul.f32	s15, s18, s15
+ 112 0060 17EE900A 		vmov	r0, s15
+ 113 0064 FFF7FEFF 		bl	__aeabi_f2d
+ 114              	.LVL9:
+ 115 0068 8246     		mov	r10, r0
+ 116 006a 8B46     		mov	fp, r1
+ 117              		.loc 1 27 37 view .LVU16
+ 118 006c 0246     		mov	r2, r0
+ 119 006e 0B46     		mov	r3, r1
+ 120 0070 4046     		mov	r0, r8
+ 121 0072 4946     		mov	r1, r9
+ 122 0074 FFF7FEFF 		bl	__aeabi_dadd
+ 123              	.LVL10:
+ 124 0078 0246     		mov	r2, r0
+ 125 007a 0B46     		mov	r3, r1
+ 126              		.loc 1 27 13 view .LVU17
+ 127 007c 3046     		mov	r0, r6
+ 128 007e 3946     		mov	r1, r7
+ 129 0080 FFF7FEFF 		bl	__aeabi_dmul
+ 130              	.LVL11:
+ 131              		.loc 1 27 8 view .LVU18
+ 132 0084 FFF7FEFF 		bl	__aeabi_d2f
+ 133              	.LVL12:
+ 134 0088 08EE100A 		vmov	s16, r0
+ 135              	.LVL13:
+  28:Core/Src/svpwm.c ****     WZ = WW * (-((SQRT3 / 2) * ualpha) + (ubeta / 2));
+ 136              		.loc 1 28 5 is_stmt 1 view .LVU19
+ 137              		.loc 1 28 40 is_stmt 0 view .LVU20
+ 138 008c 4246     		mov	r2, r8
+ 139 008e 4B46     		mov	r3, r9
+ 140 0090 5046     		mov	r0, r10
+ 141              	.LVL14:
+ 142              		.loc 1 28 40 view .LVU21
+ 143 0092 5946     		mov	r1, fp
+ 144 0094 FFF7FEFF 		bl	__aeabi_dsub
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 4
+
+
+ 145              	.LVL15:
+ 146 0098 0246     		mov	r2, r0
+ 147 009a 0B46     		mov	r3, r1
+ 148              		.loc 1 28 13 view .LVU22
+ 149 009c 3046     		mov	r0, r6
+ 150 009e 3946     		mov	r1, r7
+ 151 00a0 FFF7FEFF 		bl	__aeabi_dmul
+ 152              	.LVL16:
+ 153              		.loc 1 28 8 view .LVU23
+ 154 00a4 FFF7FEFF 		bl	__aeabi_d2f
+ 155              	.LVL17:
+ 156 00a8 07EE900A 		vmov	s15, r0
+ 157              	.LVL18:
+  29:Core/Src/svpwm.c **** 
+  30:Core/Src/svpwm.c ****     // 扇区判断以及工作时间
+  31:Core/Src/svpwm.c ****     if (WY < 0)
+ 158              		.loc 1 31 5 is_stmt 1 view .LVU24
+ 159              		.loc 1 31 8 is_stmt 0 view .LVU25
+ 160 00ac B5EEC08A 		vcmpe.f32	s16, #0
+ 161 00b0 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 162 00b4 45D4     		bmi	.L38
+  32:Core/Src/svpwm.c ****     {
+  33:Core/Src/svpwm.c ****         if (WZ < 0)
+  34:Core/Src/svpwm.c ****         {
+  35:Core/Src/svpwm.c ****             // SECTOR2
+  36:Core/Src/svpwm.c ****             Tx = WZ;
+  37:Core/Src/svpwm.c ****             Ty = WY;
+  38:Core/Src/svpwm.c ****             if (Tx + Ty > TS)
+  39:Core/Src/svpwm.c ****             {
+  40:Core/Src/svpwm.c ****                 // 放缩防止超调
+  41:Core/Src/svpwm.c ****                 Tx = Tx / (Tx + Ty) * TS;
+  42:Core/Src/svpwm.c ****                 Ty = Ty / (Tx + Ty) * TS;
+  43:Core/Src/svpwm.c ****             }
+  44:Core/Src/svpwm.c ****             T0 = (TS - Tx - Ty) / 2;
+  45:Core/Src/svpwm.c **** 
+  46:Core/Src/svpwm.c ****             chan1 = (Ty + T0) / 2; // T2/2+T0/2
+  47:Core/Src/svpwm.c ****             chan2 = T0 / 2;        // T0/2
+  48:Core/Src/svpwm.c ****             chan3 = (TS - T0) / 2; // T0/2+T2/2+T6/2 = Ts/2 - T7/2
+  49:Core/Src/svpwm.c ****         }
+  50:Core/Src/svpwm.c ****         else // Z>=0
+  51:Core/Src/svpwm.c ****             if (WX >= 0)
+  52:Core/Src/svpwm.c ****             {
+  53:Core/Src/svpwm.c ****                 // SECTOR3
+  54:Core/Src/svpwm.c ****                 Tx = WX;
+  55:Core/Src/svpwm.c ****                 Ty = -WY;
+  56:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+  57:Core/Src/svpwm.c ****                 {
+  58:Core/Src/svpwm.c ****                     // 放缩防止超调
+  59:Core/Src/svpwm.c ****                     Tx = Tx / (Tx + Ty) * TS;
+  60:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+  61:Core/Src/svpwm.c ****                 }
+  62:Core/Src/svpwm.c ****                 T0 = (TS - Tx - Ty) / 2;
+  63:Core/Src/svpwm.c **** 
+  64:Core/Src/svpwm.c ****                 chan1 = (TS - T0) / 2;
+  65:Core/Src/svpwm.c ****                 chan2 = T0 / 2;
+  66:Core/Src/svpwm.c ****                 chan3 = (T0 + Tx) / 2;
+  67:Core/Src/svpwm.c ****             }
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 5
+
+
+  68:Core/Src/svpwm.c ****             else if (WX < 0)
+  69:Core/Src/svpwm.c ****             {
+  70:Core/Src/svpwm.c ****                 // SECTOR4
+  71:Core/Src/svpwm.c ****                 Tx = -WY;
+  72:Core/Src/svpwm.c ****                 Ty = -WZ;
+  73:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+  74:Core/Src/svpwm.c ****                 {
+  75:Core/Src/svpwm.c ****                     // 放缩防止超调
+  76:Core/Src/svpwm.c ****                     Tx = Tx / (Tx + Ty) * TS;
+  77:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+  78:Core/Src/svpwm.c ****                 }
+  79:Core/Src/svpwm.c ****                 T0 = (TS - Tx - Ty) / 2;
+  80:Core/Src/svpwm.c **** 
+  81:Core/Src/svpwm.c ****                 chan1 = (TS - T0) / 2;
+  82:Core/Src/svpwm.c ****                 chan2 = (Ty + T0) / 2;
+  83:Core/Src/svpwm.c ****                 chan3 = T0 / 2;
+  84:Core/Src/svpwm.c ****             }
+  85:Core/Src/svpwm.c ****     }
+  86:Core/Src/svpwm.c ****     else if (WY >= 0)
+ 163              		.loc 1 86 10 is_stmt 1 view .LVU26
+ 164              		.loc 1 86 13 is_stmt 0 view .LVU27
+ 165 00b6 B5EEC08A 		vcmpe.f32	s16, #0
+ 166 00ba F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 167 00be C0F2AF80 		blt	.L7
+  87:Core/Src/svpwm.c ****     {
+  88:Core/Src/svpwm.c ****         if (WZ < 0)
+ 168              		.loc 1 88 9 is_stmt 1 view .LVU28
+ 169              		.loc 1 88 12 is_stmt 0 view .LVU29
+ 170 00c2 F5EEC07A 		vcmpe.f32	s15, #0
+ 171 00c6 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 172 00ca 00F1EF80 		bmi	.L39
+  89:Core/Src/svpwm.c ****         {
+  90:Core/Src/svpwm.c ****             if (WX >= 0)
+  91:Core/Src/svpwm.c ****             {
+  92:Core/Src/svpwm.c ****                 // SECTOR1
+  93:Core/Src/svpwm.c ****                 Tx = -WZ;
+  94:Core/Src/svpwm.c ****                 Ty = WX;
+  95:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+  96:Core/Src/svpwm.c ****                 {
+  97:Core/Src/svpwm.c ****                     // 放缩防止超调
+  98:Core/Src/svpwm.c ****                     Tx = Tx / (Tx + Ty) * TS;
+  99:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 100:Core/Src/svpwm.c ****                 }
+ 101:Core/Src/svpwm.c ****                 T0 = (TS - Tx - Ty) / 2;
+ 102:Core/Src/svpwm.c **** 
+ 103:Core/Src/svpwm.c ****                 chan1 = T0 / 2;
+ 104:Core/Src/svpwm.c ****                 chan2 = (Tx + T0) / 2;
+ 105:Core/Src/svpwm.c ****                 chan3 = (TS - T0) / 2;
+ 106:Core/Src/svpwm.c ****             }
+ 107:Core/Src/svpwm.c ****             else if (WX < 0)
+ 108:Core/Src/svpwm.c ****             {
+ 109:Core/Src/svpwm.c ****                 // SECTOR6
+ 110:Core/Src/svpwm.c ****                 Tx = -WX;
+ 111:Core/Src/svpwm.c ****                 Ty = WZ;
+ 112:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+ 113:Core/Src/svpwm.c ****                 {
+ 114:Core/Src/svpwm.c ****                     // 放缩防止超调
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 6
+
+
+ 115:Core/Src/svpwm.c ****                     Tx = Tx / (Tx + Ty) * TS;
+ 116:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 117:Core/Src/svpwm.c ****                 }
+ 118:Core/Src/svpwm.c ****                 T0 = (TS - Tx - Ty) / 2;
+ 119:Core/Src/svpwm.c **** 
+ 120:Core/Src/svpwm.c ****                 chan1 = T0 / 2;
+ 121:Core/Src/svpwm.c ****                 chan2 = (TS - T0) / 2;
+ 122:Core/Src/svpwm.c ****                 chan3 = (Ty + T0) / 2;
+ 123:Core/Src/svpwm.c ****             }
+ 124:Core/Src/svpwm.c ****         } // WZ>=0
+ 125:Core/Src/svpwm.c ****         else if (WX < 0)
+ 173              		.loc 1 125 14 is_stmt 1 view .LVU30
+ 174              		.loc 1 125 17 is_stmt 0 view .LVU31
+ 175 00ce F5EEC08A 		vcmpe.f32	s17, #0
+ 176 00d2 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 177 00d6 40F1A380 		bpl	.L7
+ 126:Core/Src/svpwm.c ****         {
+ 127:Core/Src/svpwm.c ****             // SECTOR5
+ 128:Core/Src/svpwm.c ****             Tx = WY;
+ 178              		.loc 1 128 13 is_stmt 1 view .LVU32
+ 179              		.loc 1 128 16 is_stmt 0 view .LVU33
+ 180 00da BCEEC88A 		vcvt.u32.f32	s16, s16
+ 181              	.LVL19:
+ 182              		.loc 1 128 16 view .LVU34
+ 183 00de 18EE103A 		vmov	r3, s16	@ int
+ 184 00e2 9BB2     		uxth	r3, r3
+ 185              	.LVL20:
+ 129:Core/Src/svpwm.c ****             Ty = -WX;
+ 186              		.loc 1 129 13 is_stmt 1 view .LVU35
+ 187              		.loc 1 129 18 is_stmt 0 view .LVU36
+ 188 00e4 F1EE688A 		vneg.f32	s17, s17
+ 189              	.LVL21:
+ 190              		.loc 1 129 16 view .LVU37
+ 191 00e8 FCEEE88A 		vcvt.u32.f32	s17, s17
+ 192 00ec 18EE902A 		vmov	r2, s17	@ int
+ 193 00f0 92B2     		uxth	r2, r2
+ 194              	.LVL22:
+ 130:Core/Src/svpwm.c ****             if (Tx + Ty > TS)
+ 195              		.loc 1 130 13 is_stmt 1 view .LVU38
+ 196              		.loc 1 130 20 is_stmt 0 view .LVU39
+ 197 00f2 9918     		adds	r1, r3, r2
+ 198              		.loc 1 130 16 view .LVU40
+ 199 00f4 B1F5FA6F 		cmp	r1, #2000
+ 200 00f8 10DD     		ble	.L22
+ 131:Core/Src/svpwm.c ****             {
+ 132:Core/Src/svpwm.c ****                 // 放缩防止超调
+ 133:Core/Src/svpwm.c ****                 Tx = Tx / (Tx + Ty) * TS;
+ 201              		.loc 1 133 17 is_stmt 1 view .LVU41
+ 202              		.loc 1 133 25 is_stmt 0 view .LVU42
+ 203 00fa 93FBF1F3 		sdiv	r3, r3, r1
+ 204              	.LVL23:
+ 205              		.loc 1 133 20 view .LVU43
+ 206 00fe C3EB4311 		rsb	r1, r3, r3, lsl #5
+ 207 0102 03EB8103 		add	r3, r3, r1, lsl #2
+ 208 0106 1B01     		lsls	r3, r3, #4
+ 209 0108 9BB2     		uxth	r3, r3
+ 210              	.LVL24:
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 7
+
+
+ 134:Core/Src/svpwm.c ****                 Ty = Ty / (Tx + Ty) * TS;
+ 211              		.loc 1 134 17 is_stmt 1 view .LVU44
+ 212              		.loc 1 134 31 is_stmt 0 view .LVU45
+ 213 010a 9918     		adds	r1, r3, r2
+ 214              		.loc 1 134 25 view .LVU46
+ 215 010c 92FBF1F2 		sdiv	r2, r2, r1
+ 216              	.LVL25:
+ 217              		.loc 1 134 20 view .LVU47
+ 218 0110 C2EB4211 		rsb	r1, r2, r2, lsl #5
+ 219 0114 02EB8102 		add	r2, r2, r1, lsl #2
+ 220 0118 1201     		lsls	r2, r2, #4
+ 221 011a 92B2     		uxth	r2, r2
+ 222              	.LVL26:
+ 223              	.L22:
+ 135:Core/Src/svpwm.c ****             }
+ 136:Core/Src/svpwm.c ****             T0 = (TS - Tx - Ty) / 2;
+ 224              		.loc 1 136 13 is_stmt 1 view .LVU48
+ 225              		.loc 1 136 22 is_stmt 0 view .LVU49
+ 226 011c C3F5FA65 		rsb	r5, r3, #2000
+ 227              		.loc 1 136 27 view .LVU50
+ 228 0120 AD1A     		subs	r5, r5, r2
+ 229              		.loc 1 136 33 view .LVU51
+ 230 0122 05EBD575 		add	r5, r5, r5, lsr #31
+ 231              		.loc 1 136 16 view .LVU52
+ 232 0126 C5F34F05 		ubfx	r5, r5, #1, #16
+ 233              	.LVL27:
+ 137:Core/Src/svpwm.c **** 
+ 138:Core/Src/svpwm.c ****             chan1 = (Tx + T0) / 2;
+ 234              		.loc 1 138 13 is_stmt 1 view .LVU53
+ 235              		.loc 1 138 31 is_stmt 0 view .LVU54
+ 236 012a 2B44     		add	r3, r3, r5
+ 237              	.LVL28:
+ 238              		.loc 1 138 19 view .LVU55
+ 239 012c C3F34F04 		ubfx	r4, r3, #1, #16
+ 240              	.LVL29:
+ 139:Core/Src/svpwm.c ****             chan2 = (TS - T0) / 2;
+ 241              		.loc 1 139 13 is_stmt 1 view .LVU56
+ 242              		.loc 1 139 25 is_stmt 0 view .LVU57
+ 243 0130 C5F5FA6A 		rsb	r10, r5, #2000
+ 244              		.loc 1 139 31 view .LVU58
+ 245 0134 0AEBDA7A 		add	r10, r10, r10, lsr #31
+ 246              		.loc 1 139 19 view .LVU59
+ 247 0138 CAF34F03 		ubfx	r3, r10, #1, #16
+ 248 013c 0193     		str	r3, [sp, #4]
+ 249              	.LVL30:
+ 140:Core/Src/svpwm.c ****             chan3 = T0 / 2;
+ 250              		.loc 1 140 13 is_stmt 1 view .LVU60
+ 251              		.loc 1 140 19 is_stmt 0 view .LVU61
+ 252 013e 6D08     		lsrs	r5, r5, #1
+ 253              	.LVL31:
+ 254              		.loc 1 140 19 view .LVU62
+ 255 0140 6EE0     		b	.L7
+ 256              	.LVL32:
+ 257              	.L38:
+  33:Core/Src/svpwm.c ****         {
+ 258              		.loc 1 33 9 is_stmt 1 view .LVU63
+  33:Core/Src/svpwm.c ****         {
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 8
+
+
+ 259              		.loc 1 33 12 is_stmt 0 view .LVU64
+ 260 0142 F5EEC07A 		vcmpe.f32	s15, #0
+ 261 0146 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 262 014a 38D4     		bmi	.L40
+  51:Core/Src/svpwm.c ****             {
+ 263              		.loc 1 51 13 is_stmt 1 view .LVU65
+  51:Core/Src/svpwm.c ****             {
+ 264              		.loc 1 51 16 is_stmt 0 view .LVU66
+ 265 014c F5EEC08A 		vcmpe.f32	s17, #0
+ 266 0150 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 267 0154 6FDB     		blt	.L34
+  54:Core/Src/svpwm.c ****                 Ty = -WY;
+ 268              		.loc 1 54 17 is_stmt 1 view .LVU67
+  54:Core/Src/svpwm.c ****                 Ty = -WY;
+ 269              		.loc 1 54 20 is_stmt 0 view .LVU68
+ 270 0156 FCEEE88A 		vcvt.u32.f32	s17, s17
+ 271              	.LVL33:
+  54:Core/Src/svpwm.c ****                 Ty = -WY;
+ 272              		.loc 1 54 20 view .LVU69
+ 273 015a 18EE903A 		vmov	r3, s17	@ int
+ 274 015e 99B2     		uxth	r1, r3
+ 275              	.LVL34:
+  55:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+ 276              		.loc 1 55 17 is_stmt 1 view .LVU70
+  55:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+ 277              		.loc 1 55 22 is_stmt 0 view .LVU71
+ 278 0160 B1EE488A 		vneg.f32	s16, s16
+ 279              	.LVL35:
+  55:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+ 280              		.loc 1 55 20 view .LVU72
+ 281 0164 BCEEC88A 		vcvt.u32.f32	s16, s16
+ 282 0168 18EE103A 		vmov	r3, s16	@ int
+ 283 016c 9BB2     		uxth	r3, r3
+ 284              	.LVL36:
+  56:Core/Src/svpwm.c ****                 {
+ 285              		.loc 1 56 17 is_stmt 1 view .LVU73
+  56:Core/Src/svpwm.c ****                 {
+ 286              		.loc 1 56 24 is_stmt 0 view .LVU74
+ 287 016e CA18     		adds	r2, r1, r3
+  56:Core/Src/svpwm.c ****                 {
+ 288              		.loc 1 56 20 view .LVU75
+ 289 0170 B2F5FA6F 		cmp	r2, #2000
+ 290 0174 10DD     		ble	.L10
+  59:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 291              		.loc 1 59 21 is_stmt 1 view .LVU76
+  59:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 292              		.loc 1 59 29 is_stmt 0 view .LVU77
+ 293 0176 91FBF2F2 		sdiv	r2, r1, r2
+  59:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 294              		.loc 1 59 24 view .LVU78
+ 295 017a C2EB4211 		rsb	r1, r2, r2, lsl #5
+ 296              	.LVL37:
+  59:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 297              		.loc 1 59 24 view .LVU79
+ 298 017e 02EB8102 		add	r2, r2, r1, lsl #2
+ 299 0182 1201     		lsls	r2, r2, #4
+ 300 0184 91B2     		uxth	r1, r2
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 9
+
+
+ 301              	.LVL38:
+  60:Core/Src/svpwm.c ****                 }
+ 302              		.loc 1 60 21 is_stmt 1 view .LVU80
+  60:Core/Src/svpwm.c ****                 }
+ 303              		.loc 1 60 35 is_stmt 0 view .LVU81
+ 304 0186 CA18     		adds	r2, r1, r3
+  60:Core/Src/svpwm.c ****                 }
+ 305              		.loc 1 60 29 view .LVU82
+ 306 0188 93FBF2F3 		sdiv	r3, r3, r2
+ 307              	.LVL39:
+  60:Core/Src/svpwm.c ****                 }
+ 308              		.loc 1 60 24 view .LVU83
+ 309 018c C3EB4312 		rsb	r2, r3, r3, lsl #5
+ 310 0190 03EB8203 		add	r3, r3, r2, lsl #2
+ 311 0194 1B01     		lsls	r3, r3, #4
+ 312 0196 9BB2     		uxth	r3, r3
+ 313              	.LVL40:
+ 314              	.L10:
+  62:Core/Src/svpwm.c **** 
+ 315              		.loc 1 62 17 is_stmt 1 view .LVU84
+  62:Core/Src/svpwm.c **** 
+ 316              		.loc 1 62 26 is_stmt 0 view .LVU85
+ 317 0198 C1F5FA62 		rsb	r2, r1, #2000
+  62:Core/Src/svpwm.c **** 
+ 318              		.loc 1 62 31 view .LVU86
+ 319 019c D31A     		subs	r3, r2, r3
+ 320              	.LVL41:
+  62:Core/Src/svpwm.c **** 
+ 321              		.loc 1 62 37 view .LVU87
+ 322 019e 03EBD373 		add	r3, r3, r3, lsr #31
+  62:Core/Src/svpwm.c **** 
+ 323              		.loc 1 62 20 view .LVU88
+ 324 01a2 C3F34F03 		ubfx	r3, r3, #1, #16
+ 325              	.LVL42:
+  64:Core/Src/svpwm.c ****                 chan2 = T0 / 2;
+ 326              		.loc 1 64 17 is_stmt 1 view .LVU89
+  64:Core/Src/svpwm.c ****                 chan2 = T0 / 2;
+ 327              		.loc 1 64 29 is_stmt 0 view .LVU90
+ 328 01a6 C3F5FA64 		rsb	r4, r3, #2000
+  64:Core/Src/svpwm.c ****                 chan2 = T0 / 2;
+ 329              		.loc 1 64 35 view .LVU91
+ 330 01aa 04EBD474 		add	r4, r4, r4, lsr #31
+  64:Core/Src/svpwm.c ****                 chan2 = T0 / 2;
+ 331              		.loc 1 64 23 view .LVU92
+ 332 01ae C4F34F04 		ubfx	r4, r4, #1, #16
+ 333              	.LVL43:
+  65:Core/Src/svpwm.c ****                 chan3 = (T0 + Tx) / 2;
+ 334              		.loc 1 65 17 is_stmt 1 view .LVU93
+  65:Core/Src/svpwm.c ****                 chan3 = (T0 + Tx) / 2;
+ 335              		.loc 1 65 23 is_stmt 0 view .LVU94
+ 336 01b2 5A08     		lsrs	r2, r3, #1
+ 337 01b4 0192     		str	r2, [sp, #4]
+ 338              	.LVL44:
+  66:Core/Src/svpwm.c ****             }
+ 339              		.loc 1 66 17 is_stmt 1 view .LVU95
+  66:Core/Src/svpwm.c ****             }
+ 340              		.loc 1 66 35 is_stmt 0 view .LVU96
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 10
+
+
+ 341 01b6 0B44     		add	r3, r3, r1
+ 342              	.LVL45:
+  66:Core/Src/svpwm.c ****             }
+ 343              		.loc 1 66 23 view .LVU97
+ 344 01b8 C3F34F05 		ubfx	r5, r3, #1, #16
+ 345              	.LVL46:
+  66:Core/Src/svpwm.c ****             }
+ 346              		.loc 1 66 23 view .LVU98
+ 347 01bc 30E0     		b	.L7
+ 348              	.LVL47:
+ 349              	.L40:
+  36:Core/Src/svpwm.c ****             Ty = WY;
+ 350              		.loc 1 36 13 is_stmt 1 view .LVU99
+  36:Core/Src/svpwm.c ****             Ty = WY;
+ 351              		.loc 1 36 16 is_stmt 0 view .LVU100
+ 352 01be FCEEE77A 		vcvt.u32.f32	s15, s15
+ 353 01c2 17EE903A 		vmov	r3, s15	@ int
+ 354 01c6 9AB2     		uxth	r2, r3
+ 355              	.LVL48:
+  37:Core/Src/svpwm.c ****             if (Tx + Ty > TS)
+ 356              		.loc 1 37 13 is_stmt 1 view .LVU101
+  37:Core/Src/svpwm.c ****             if (Tx + Ty > TS)
+ 357              		.loc 1 37 16 is_stmt 0 view .LVU102
+ 358 01c8 BCEEC88A 		vcvt.u32.f32	s16, s16
+ 359              	.LVL49:
+  37:Core/Src/svpwm.c ****             if (Tx + Ty > TS)
+ 360              		.loc 1 37 16 view .LVU103
+ 361 01cc 18EE103A 		vmov	r3, s16	@ int
+ 362 01d0 9BB2     		uxth	r3, r3
+ 363              	.LVL50:
+  38:Core/Src/svpwm.c ****             {
+ 364              		.loc 1 38 13 is_stmt 1 view .LVU104
+  38:Core/Src/svpwm.c ****             {
+ 365              		.loc 1 38 20 is_stmt 0 view .LVU105
+ 366 01d2 D118     		adds	r1, r2, r3
+  38:Core/Src/svpwm.c ****             {
+ 367              		.loc 1 38 16 view .LVU106
+ 368 01d4 B1F5FA6F 		cmp	r1, #2000
+ 369 01d8 10DD     		ble	.L6
+  41:Core/Src/svpwm.c ****                 Ty = Ty / (Tx + Ty) * TS;
+ 370              		.loc 1 41 17 is_stmt 1 view .LVU107
+  41:Core/Src/svpwm.c ****                 Ty = Ty / (Tx + Ty) * TS;
+ 371              		.loc 1 41 25 is_stmt 0 view .LVU108
+ 372 01da 92FBF1F2 		sdiv	r2, r2, r1
+ 373              	.LVL51:
+  41:Core/Src/svpwm.c ****                 Ty = Ty / (Tx + Ty) * TS;
+ 374              		.loc 1 41 20 view .LVU109
+ 375 01de C2EB4211 		rsb	r1, r2, r2, lsl #5
+ 376 01e2 02EB8102 		add	r2, r2, r1, lsl #2
+ 377 01e6 1201     		lsls	r2, r2, #4
+ 378 01e8 92B2     		uxth	r2, r2
+ 379              	.LVL52:
+  42:Core/Src/svpwm.c ****             }
+ 380              		.loc 1 42 17 is_stmt 1 view .LVU110
+  42:Core/Src/svpwm.c ****             }
+ 381              		.loc 1 42 31 is_stmt 0 view .LVU111
+ 382 01ea D118     		adds	r1, r2, r3
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 11
+
+
+  42:Core/Src/svpwm.c ****             }
+ 383              		.loc 1 42 25 view .LVU112
+ 384 01ec 93FBF1F3 		sdiv	r3, r3, r1
+ 385              	.LVL53:
+  42:Core/Src/svpwm.c ****             }
+ 386              		.loc 1 42 20 view .LVU113
+ 387 01f0 C3EB4311 		rsb	r1, r3, r3, lsl #5
+ 388 01f4 03EB8103 		add	r3, r3, r1, lsl #2
+ 389 01f8 1B01     		lsls	r3, r3, #4
+ 390 01fa 9BB2     		uxth	r3, r3
+ 391              	.LVL54:
+ 392              	.L6:
+  44:Core/Src/svpwm.c **** 
+ 393              		.loc 1 44 13 is_stmt 1 view .LVU114
+  44:Core/Src/svpwm.c **** 
+ 394              		.loc 1 44 22 is_stmt 0 view .LVU115
+ 395 01fc C2F5FA62 		rsb	r2, r2, #2000
+ 396              	.LVL55:
+  44:Core/Src/svpwm.c **** 
+ 397              		.loc 1 44 27 view .LVU116
+ 398 0200 D21A     		subs	r2, r2, r3
+  44:Core/Src/svpwm.c **** 
+ 399              		.loc 1 44 33 view .LVU117
+ 400 0202 02EBD272 		add	r2, r2, r2, lsr #31
+  44:Core/Src/svpwm.c **** 
+ 401              		.loc 1 44 16 view .LVU118
+ 402 0206 C2F34F02 		ubfx	r2, r2, #1, #16
+ 403              	.LVL56:
+  46:Core/Src/svpwm.c ****             chan2 = T0 / 2;        // T0/2
+ 404              		.loc 1 46 13 is_stmt 1 view .LVU119
+  46:Core/Src/svpwm.c ****             chan2 = T0 / 2;        // T0/2
+ 405              		.loc 1 46 31 is_stmt 0 view .LVU120
+ 406 020a 1344     		add	r3, r3, r2
+ 407              	.LVL57:
+  46:Core/Src/svpwm.c ****             chan2 = T0 / 2;        // T0/2
+ 408              		.loc 1 46 19 view .LVU121
+ 409 020c C3F34F04 		ubfx	r4, r3, #1, #16
+ 410              	.LVL58:
+  47:Core/Src/svpwm.c ****             chan3 = (TS - T0) / 2; // T0/2+T2/2+T6/2 = Ts/2 - T7/2
+ 411              		.loc 1 47 13 is_stmt 1 view .LVU122
+  47:Core/Src/svpwm.c ****             chan3 = (TS - T0) / 2; // T0/2+T2/2+T6/2 = Ts/2 - T7/2
+ 412              		.loc 1 47 19 is_stmt 0 view .LVU123
+ 413 0210 5308     		lsrs	r3, r2, #1
+ 414 0212 0193     		str	r3, [sp, #4]
+ 415              	.LVL59:
+  48:Core/Src/svpwm.c ****         }
+ 416              		.loc 1 48 13 is_stmt 1 view .LVU124
+  48:Core/Src/svpwm.c ****         }
+ 417              		.loc 1 48 25 is_stmt 0 view .LVU125
+ 418 0214 C2F5FA62 		rsb	r2, r2, #2000
+ 419              	.LVL60:
+  48:Core/Src/svpwm.c ****         }
+ 420              		.loc 1 48 31 view .LVU126
+ 421 0218 02EBD272 		add	r2, r2, r2, lsr #31
+  48:Core/Src/svpwm.c ****         }
+ 422              		.loc 1 48 19 view .LVU127
+ 423 021c C2F34F05 		ubfx	r5, r2, #1, #16
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 12
+
+
+ 424              	.LVL61:
+ 425              	.L7:
+ 141:Core/Src/svpwm.c ****         }
+ 142:Core/Src/svpwm.c ****     }
+ 143:Core/Src/svpwm.c **** 
+ 144:Core/Src/svpwm.c ****     // 作用到定时器
+ 145:Core/Src/svpwm.c ****     __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, chan1);
+ 426              		.loc 1 145 5 is_stmt 1 view .LVU128
+ 427 0220 5D4B     		ldr	r3, .L41
+ 428 0222 1B68     		ldr	r3, [r3]
+ 429 0224 5C63     		str	r4, [r3, #52]
+ 146:Core/Src/svpwm.c ****     __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_2, chan2);
+ 430              		.loc 1 146 5 view .LVU129
+ 431 0226 019A     		ldr	r2, [sp, #4]
+ 432 0228 9A63     		str	r2, [r3, #56]
+ 147:Core/Src/svpwm.c ****     __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_3, chan3);
+ 433              		.loc 1 147 5 view .LVU130
+ 434 022a DD63     		str	r5, [r3, #60]
+ 148:Core/Src/svpwm.c **** }
+ 435              		.loc 1 148 1 is_stmt 0 view .LVU131
+ 436 022c 03B0     		add	sp, sp, #12
+ 437              	.LCFI3:
+ 438              		.cfi_remember_state
+ 439              		.cfi_def_cfa_offset 52
+ 440              		@ sp needed
+ 441 022e BDEC048B 		vldm	sp!, {d8-d9}
+ 442              	.LCFI4:
+ 443              		.cfi_restore 82
+ 444              		.cfi_restore 83
+ 445              		.cfi_restore 80
+ 446              		.cfi_restore 81
+ 447              		.cfi_def_cfa_offset 36
+ 448              	.LVL62:
+ 449              		.loc 1 148 1 view .LVU132
+ 450 0232 BDE8F08F 		pop	{r4, r5, r6, r7, r8, r9, r10, fp, pc}
+ 451              	.LVL63:
+ 452              	.L34:
+ 453              	.LCFI5:
+ 454              		.cfi_restore_state
+  68:Core/Src/svpwm.c ****             {
+ 455              		.loc 1 68 18 is_stmt 1 view .LVU133
+  68:Core/Src/svpwm.c ****             {
+ 456              		.loc 1 68 21 is_stmt 0 view .LVU134
+ 457 0236 F5EEC08A 		vcmpe.f32	s17, #0
+ 458 023a F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 459 023e EFD5     		bpl	.L7
+  71:Core/Src/svpwm.c ****                 Ty = -WZ;
+ 460              		.loc 1 71 17 is_stmt 1 view .LVU135
+  71:Core/Src/svpwm.c ****                 Ty = -WZ;
+ 461              		.loc 1 71 22 is_stmt 0 view .LVU136
+ 462 0240 B1EE488A 		vneg.f32	s16, s16
+ 463              	.LVL64:
+  71:Core/Src/svpwm.c ****                 Ty = -WZ;
+ 464              		.loc 1 71 20 view .LVU137
+ 465 0244 BCEEC88A 		vcvt.u32.f32	s16, s16
+ 466 0248 18EE103A 		vmov	r3, s16	@ int
+ 467 024c 9BB2     		uxth	r3, r3
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 13
+
+
+ 468              	.LVL65:
+  72:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+ 469              		.loc 1 72 17 is_stmt 1 view .LVU138
+  72:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+ 470              		.loc 1 72 22 is_stmt 0 view .LVU139
+ 471 024e F1EE677A 		vneg.f32	s15, s15
+  72:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+ 472              		.loc 1 72 20 view .LVU140
+ 473 0252 FCEEE77A 		vcvt.u32.f32	s15, s15
+ 474 0256 17EE902A 		vmov	r2, s15	@ int
+ 475 025a 92B2     		uxth	r2, r2
+ 476              	.LVL66:
+  73:Core/Src/svpwm.c ****                 {
+ 477              		.loc 1 73 17 is_stmt 1 view .LVU141
+  73:Core/Src/svpwm.c ****                 {
+ 478              		.loc 1 73 24 is_stmt 0 view .LVU142
+ 479 025c 9918     		adds	r1, r3, r2
+  73:Core/Src/svpwm.c ****                 {
+ 480              		.loc 1 73 20 view .LVU143
+ 481 025e B1F5FA6F 		cmp	r1, #2000
+ 482 0262 10DD     		ble	.L12
+  76:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 483              		.loc 1 76 21 is_stmt 1 view .LVU144
+  76:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 484              		.loc 1 76 29 is_stmt 0 view .LVU145
+ 485 0264 93FBF1F3 		sdiv	r3, r3, r1
+ 486              	.LVL67:
+  76:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 487              		.loc 1 76 24 view .LVU146
+ 488 0268 C3EB4311 		rsb	r1, r3, r3, lsl #5
+ 489 026c 03EB8103 		add	r3, r3, r1, lsl #2
+ 490 0270 1B01     		lsls	r3, r3, #4
+ 491 0272 9BB2     		uxth	r3, r3
+ 492              	.LVL68:
+  77:Core/Src/svpwm.c ****                 }
+ 493              		.loc 1 77 21 is_stmt 1 view .LVU147
+  77:Core/Src/svpwm.c ****                 }
+ 494              		.loc 1 77 35 is_stmt 0 view .LVU148
+ 495 0274 9918     		adds	r1, r3, r2
+  77:Core/Src/svpwm.c ****                 }
+ 496              		.loc 1 77 29 view .LVU149
+ 497 0276 92FBF1F2 		sdiv	r2, r2, r1
+ 498              	.LVL69:
+  77:Core/Src/svpwm.c ****                 }
+ 499              		.loc 1 77 24 view .LVU150
+ 500 027a C2EB4211 		rsb	r1, r2, r2, lsl #5
+ 501 027e 02EB8102 		add	r2, r2, r1, lsl #2
+ 502 0282 1201     		lsls	r2, r2, #4
+ 503 0284 92B2     		uxth	r2, r2
+ 504              	.LVL70:
+ 505              	.L12:
+  79:Core/Src/svpwm.c **** 
+ 506              		.loc 1 79 17 is_stmt 1 view .LVU151
+  79:Core/Src/svpwm.c **** 
+ 507              		.loc 1 79 26 is_stmt 0 view .LVU152
+ 508 0286 C3F5FA63 		rsb	r3, r3, #2000
+ 509              	.LVL71:
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 14
+
+
+  79:Core/Src/svpwm.c **** 
+ 510              		.loc 1 79 31 view .LVU153
+ 511 028a 9B1A     		subs	r3, r3, r2
+  79:Core/Src/svpwm.c **** 
+ 512              		.loc 1 79 37 view .LVU154
+ 513 028c 03EBD373 		add	r3, r3, r3, lsr #31
+  79:Core/Src/svpwm.c **** 
+ 514              		.loc 1 79 20 view .LVU155
+ 515 0290 C3F34F03 		ubfx	r3, r3, #1, #16
+ 516              	.LVL72:
+  81:Core/Src/svpwm.c ****                 chan2 = (Ty + T0) / 2;
+ 517              		.loc 1 81 17 is_stmt 1 view .LVU156
+  81:Core/Src/svpwm.c ****                 chan2 = (Ty + T0) / 2;
+ 518              		.loc 1 81 29 is_stmt 0 view .LVU157
+ 519 0294 C3F5FA64 		rsb	r4, r3, #2000
+  81:Core/Src/svpwm.c ****                 chan2 = (Ty + T0) / 2;
+ 520              		.loc 1 81 35 view .LVU158
+ 521 0298 04EBD474 		add	r4, r4, r4, lsr #31
+  81:Core/Src/svpwm.c ****                 chan2 = (Ty + T0) / 2;
+ 522              		.loc 1 81 23 view .LVU159
+ 523 029c C4F34F04 		ubfx	r4, r4, #1, #16
+ 524              	.LVL73:
+  82:Core/Src/svpwm.c ****                 chan3 = T0 / 2;
+ 525              		.loc 1 82 17 is_stmt 1 view .LVU160
+  82:Core/Src/svpwm.c ****                 chan3 = T0 / 2;
+ 526              		.loc 1 82 35 is_stmt 0 view .LVU161
+ 527 02a0 1A44     		add	r2, r2, r3
+ 528              	.LVL74:
+  82:Core/Src/svpwm.c ****                 chan3 = T0 / 2;
+ 529              		.loc 1 82 23 view .LVU162
+ 530 02a2 C2F34F02 		ubfx	r2, r2, #1, #16
+ 531 02a6 0192     		str	r2, [sp, #4]
+ 532              	.LVL75:
+  83:Core/Src/svpwm.c ****             }
+ 533              		.loc 1 83 17 is_stmt 1 view .LVU163
+  83:Core/Src/svpwm.c ****             }
+ 534              		.loc 1 83 23 is_stmt 0 view .LVU164
+ 535 02a8 5D08     		lsrs	r5, r3, #1
+ 536              	.LVL76:
+  83:Core/Src/svpwm.c ****             }
+ 537              		.loc 1 83 23 view .LVU165
+ 538 02aa B9E7     		b	.L7
+ 539              	.LVL77:
+ 540              	.L39:
+  90:Core/Src/svpwm.c ****             {
+ 541              		.loc 1 90 13 is_stmt 1 view .LVU166
+  90:Core/Src/svpwm.c ****             {
+ 542              		.loc 1 90 16 is_stmt 0 view .LVU167
+ 543 02ac F5EEC08A 		vcmpe.f32	s17, #0
+ 544 02b0 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 545 02b4 34DB     		blt	.L36
+  93:Core/Src/svpwm.c ****                 Ty = WX;
+ 546              		.loc 1 93 17 is_stmt 1 view .LVU168
+  93:Core/Src/svpwm.c ****                 Ty = WX;
+ 547              		.loc 1 93 22 is_stmt 0 view .LVU169
+ 548 02b6 F1EE677A 		vneg.f32	s15, s15
+  93:Core/Src/svpwm.c ****                 Ty = WX;
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 15
+
+
+ 549              		.loc 1 93 20 view .LVU170
+ 550 02ba FCEEE77A 		vcvt.u32.f32	s15, s15
+ 551 02be 17EE903A 		vmov	r3, s15	@ int
+ 552 02c2 9BB2     		uxth	r3, r3
+ 553              	.LVL78:
+  94:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+ 554              		.loc 1 94 17 is_stmt 1 view .LVU171
+  94:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+ 555              		.loc 1 94 20 is_stmt 0 view .LVU172
+ 556 02c4 FCEEE88A 		vcvt.u32.f32	s17, s17
+ 557              	.LVL79:
+  94:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+ 558              		.loc 1 94 20 view .LVU173
+ 559 02c8 18EE902A 		vmov	r2, s17	@ int
+ 560 02cc 92B2     		uxth	r2, r2
+ 561              	.LVL80:
+  95:Core/Src/svpwm.c ****                 {
+ 562              		.loc 1 95 17 is_stmt 1 view .LVU174
+  95:Core/Src/svpwm.c ****                 {
+ 563              		.loc 1 95 24 is_stmt 0 view .LVU175
+ 564 02ce 9918     		adds	r1, r3, r2
+  95:Core/Src/svpwm.c ****                 {
+ 565              		.loc 1 95 20 view .LVU176
+ 566 02d0 B1F5FA6F 		cmp	r1, #2000
+ 567 02d4 10DD     		ble	.L18
+  98:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 568              		.loc 1 98 21 is_stmt 1 view .LVU177
+  98:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 569              		.loc 1 98 29 is_stmt 0 view .LVU178
+ 570 02d6 93FBF1F3 		sdiv	r3, r3, r1
+ 571              	.LVL81:
+  98:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 572              		.loc 1 98 24 view .LVU179
+ 573 02da C3EB4311 		rsb	r1, r3, r3, lsl #5
+ 574 02de 03EB8103 		add	r3, r3, r1, lsl #2
+ 575 02e2 1B01     		lsls	r3, r3, #4
+ 576 02e4 9BB2     		uxth	r3, r3
+ 577              	.LVL82:
+  99:Core/Src/svpwm.c ****                 }
+ 578              		.loc 1 99 21 is_stmt 1 view .LVU180
+  99:Core/Src/svpwm.c ****                 }
+ 579              		.loc 1 99 35 is_stmt 0 view .LVU181
+ 580 02e6 9918     		adds	r1, r3, r2
+  99:Core/Src/svpwm.c ****                 }
+ 581              		.loc 1 99 29 view .LVU182
+ 582 02e8 92FBF1F2 		sdiv	r2, r2, r1
+ 583              	.LVL83:
+  99:Core/Src/svpwm.c ****                 }
+ 584              		.loc 1 99 24 view .LVU183
+ 585 02ec C2EB4211 		rsb	r1, r2, r2, lsl #5
+ 586 02f0 02EB8102 		add	r2, r2, r1, lsl #2
+ 587 02f4 1201     		lsls	r2, r2, #4
+ 588 02f6 92B2     		uxth	r2, r2
+ 589              	.LVL84:
+ 590              	.L18:
+ 101:Core/Src/svpwm.c **** 
+ 591              		.loc 1 101 17 is_stmt 1 view .LVU184
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 16
+
+
+ 101:Core/Src/svpwm.c **** 
+ 592              		.loc 1 101 26 is_stmt 0 view .LVU185
+ 593 02f8 C3F5FA64 		rsb	r4, r3, #2000
+ 101:Core/Src/svpwm.c **** 
+ 594              		.loc 1 101 31 view .LVU186
+ 595 02fc A41A     		subs	r4, r4, r2
+ 101:Core/Src/svpwm.c **** 
+ 596              		.loc 1 101 37 view .LVU187
+ 597 02fe 04EBD474 		add	r4, r4, r4, lsr #31
+ 101:Core/Src/svpwm.c **** 
+ 598              		.loc 1 101 20 view .LVU188
+ 599 0302 C4F34F05 		ubfx	r5, r4, #1, #16
+ 600              	.LVL85:
+ 103:Core/Src/svpwm.c ****                 chan2 = (Tx + T0) / 2;
+ 601              		.loc 1 103 17 is_stmt 1 view .LVU189
+ 103:Core/Src/svpwm.c ****                 chan2 = (Tx + T0) / 2;
+ 602              		.loc 1 103 23 is_stmt 0 view .LVU190
+ 603 0306 C4F38E04 		ubfx	r4, r4, #2, #15
+ 604              	.LVL86:
+ 104:Core/Src/svpwm.c ****                 chan3 = (TS - T0) / 2;
+ 605              		.loc 1 104 17 is_stmt 1 view .LVU191
+ 104:Core/Src/svpwm.c ****                 chan3 = (TS - T0) / 2;
+ 606              		.loc 1 104 35 is_stmt 0 view .LVU192
+ 607 030a 2B44     		add	r3, r3, r5
+ 608              	.LVL87:
+ 104:Core/Src/svpwm.c ****                 chan3 = (TS - T0) / 2;
+ 609              		.loc 1 104 23 view .LVU193
+ 610 030c C3F34F03 		ubfx	r3, r3, #1, #16
+ 611 0310 0193     		str	r3, [sp, #4]
+ 612              	.LVL88:
+ 105:Core/Src/svpwm.c ****             }
+ 613              		.loc 1 105 17 is_stmt 1 view .LVU194
+ 105:Core/Src/svpwm.c ****             }
+ 614              		.loc 1 105 29 is_stmt 0 view .LVU195
+ 615 0312 C5F5FA65 		rsb	r5, r5, #2000
+ 616              	.LVL89:
+ 105:Core/Src/svpwm.c ****             }
+ 617              		.loc 1 105 35 view .LVU196
+ 618 0316 05EBD575 		add	r5, r5, r5, lsr #31
+ 105:Core/Src/svpwm.c ****             }
+ 619              		.loc 1 105 23 view .LVU197
+ 620 031a C5F34F05 		ubfx	r5, r5, #1, #16
+ 621              	.LVL90:
+ 105:Core/Src/svpwm.c ****             }
+ 622              		.loc 1 105 23 view .LVU198
+ 623 031e 7FE7     		b	.L7
+ 624              	.LVL91:
+ 625              	.L36:
+ 107:Core/Src/svpwm.c ****             {
+ 626              		.loc 1 107 18 is_stmt 1 view .LVU199
+ 107:Core/Src/svpwm.c ****             {
+ 627              		.loc 1 107 21 is_stmt 0 view .LVU200
+ 628 0320 F5EEC08A 		vcmpe.f32	s17, #0
+ 629 0324 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 630 0328 7FF57AAF 		bpl	.L7
+ 110:Core/Src/svpwm.c ****                 Ty = WZ;
+ 631              		.loc 1 110 17 is_stmt 1 view .LVU201
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 17
+
+
+ 110:Core/Src/svpwm.c ****                 Ty = WZ;
+ 632              		.loc 1 110 22 is_stmt 0 view .LVU202
+ 633 032c F1EE688A 		vneg.f32	s17, s17
+ 634              	.LVL92:
+ 110:Core/Src/svpwm.c ****                 Ty = WZ;
+ 635              		.loc 1 110 20 view .LVU203
+ 636 0330 FCEEE88A 		vcvt.u32.f32	s17, s17
+ 637 0334 18EE903A 		vmov	r3, s17	@ int
+ 638 0338 9AB2     		uxth	r2, r3
+ 639              	.LVL93:
+ 111:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+ 640              		.loc 1 111 17 is_stmt 1 view .LVU204
+ 111:Core/Src/svpwm.c ****                 if (Tx + Ty > TS)
+ 641              		.loc 1 111 20 is_stmt 0 view .LVU205
+ 642 033a FCEEE77A 		vcvt.u32.f32	s15, s15
+ 643 033e 17EE903A 		vmov	r3, s15	@ int
+ 644 0342 9BB2     		uxth	r3, r3
+ 645              	.LVL94:
+ 112:Core/Src/svpwm.c ****                 {
+ 646              		.loc 1 112 17 is_stmt 1 view .LVU206
+ 112:Core/Src/svpwm.c ****                 {
+ 647              		.loc 1 112 24 is_stmt 0 view .LVU207
+ 648 0344 D118     		adds	r1, r2, r3
+ 112:Core/Src/svpwm.c ****                 {
+ 649              		.loc 1 112 20 view .LVU208
+ 650 0346 B1F5FA6F 		cmp	r1, #2000
+ 651 034a 10DD     		ble	.L20
+ 115:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 652              		.loc 1 115 21 is_stmt 1 view .LVU209
+ 115:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 653              		.loc 1 115 29 is_stmt 0 view .LVU210
+ 654 034c 92FBF1F2 		sdiv	r2, r2, r1
+ 655              	.LVL95:
+ 115:Core/Src/svpwm.c ****                     Ty = Ty / (Tx + Ty) * TS;
+ 656              		.loc 1 115 24 view .LVU211
+ 657 0350 C2EB4211 		rsb	r1, r2, r2, lsl #5
+ 658 0354 02EB8102 		add	r2, r2, r1, lsl #2
+ 659 0358 1201     		lsls	r2, r2, #4
+ 660 035a 92B2     		uxth	r2, r2
+ 661              	.LVL96:
+ 116:Core/Src/svpwm.c ****                 }
+ 662              		.loc 1 116 21 is_stmt 1 view .LVU212
+ 116:Core/Src/svpwm.c ****                 }
+ 663              		.loc 1 116 35 is_stmt 0 view .LVU213
+ 664 035c D118     		adds	r1, r2, r3
+ 116:Core/Src/svpwm.c ****                 }
+ 665              		.loc 1 116 29 view .LVU214
+ 666 035e 93FBF1F3 		sdiv	r3, r3, r1
+ 667              	.LVL97:
+ 116:Core/Src/svpwm.c ****                 }
+ 668              		.loc 1 116 24 view .LVU215
+ 669 0362 C3EB4311 		rsb	r1, r3, r3, lsl #5
+ 670 0366 03EB8103 		add	r3, r3, r1, lsl #2
+ 671 036a 1B01     		lsls	r3, r3, #4
+ 672 036c 9BB2     		uxth	r3, r3
+ 673              	.LVL98:
+ 674              	.L20:
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 18
+
+
+ 118:Core/Src/svpwm.c **** 
+ 675              		.loc 1 118 17 is_stmt 1 view .LVU216
+ 118:Core/Src/svpwm.c **** 
+ 676              		.loc 1 118 26 is_stmt 0 view .LVU217
+ 677 036e C2F5FA62 		rsb	r2, r2, #2000
+ 678              	.LVL99:
+ 118:Core/Src/svpwm.c **** 
+ 679              		.loc 1 118 31 view .LVU218
+ 680 0372 D21A     		subs	r2, r2, r3
+ 118:Core/Src/svpwm.c **** 
+ 681              		.loc 1 118 37 view .LVU219
+ 682 0374 02EBD272 		add	r2, r2, r2, lsr #31
+ 118:Core/Src/svpwm.c **** 
+ 683              		.loc 1 118 20 view .LVU220
+ 684 0378 C2F34F01 		ubfx	r1, r2, #1, #16
+ 685              	.LVL100:
+ 120:Core/Src/svpwm.c ****                 chan2 = (TS - T0) / 2;
+ 686              		.loc 1 120 17 is_stmt 1 view .LVU221
+ 120:Core/Src/svpwm.c ****                 chan2 = (TS - T0) / 2;
+ 687              		.loc 1 120 23 is_stmt 0 view .LVU222
+ 688 037c C2F38E04 		ubfx	r4, r2, #2, #15
+ 689              	.LVL101:
+ 121:Core/Src/svpwm.c ****                 chan3 = (Ty + T0) / 2;
+ 690              		.loc 1 121 17 is_stmt 1 view .LVU223
+ 121:Core/Src/svpwm.c ****                 chan3 = (Ty + T0) / 2;
+ 691              		.loc 1 121 29 is_stmt 0 view .LVU224
+ 692 0380 C1F5FA6A 		rsb	r10, r1, #2000
+ 121:Core/Src/svpwm.c ****                 chan3 = (Ty + T0) / 2;
+ 693              		.loc 1 121 35 view .LVU225
+ 694 0384 0AEBDA7A 		add	r10, r10, r10, lsr #31
+ 121:Core/Src/svpwm.c ****                 chan3 = (Ty + T0) / 2;
+ 695              		.loc 1 121 23 view .LVU226
+ 696 0388 CAF34F02 		ubfx	r2, r10, #1, #16
+ 697 038c 0192     		str	r2, [sp, #4]
+ 698              	.LVL102:
+ 122:Core/Src/svpwm.c ****             }
+ 699              		.loc 1 122 17 is_stmt 1 view .LVU227
+ 122:Core/Src/svpwm.c ****             }
+ 700              		.loc 1 122 35 is_stmt 0 view .LVU228
+ 701 038e 0B44     		add	r3, r3, r1
+ 702              	.LVL103:
+ 122:Core/Src/svpwm.c ****             }
+ 703              		.loc 1 122 23 view .LVU229
+ 704 0390 C3F34F05 		ubfx	r5, r3, #1, #16
+ 705              	.LVL104:
+ 122:Core/Src/svpwm.c ****             }
+ 706              		.loc 1 122 23 view .LVU230
+ 707 0394 44E7     		b	.L7
+ 708              	.L42:
+ 709 0396 00BF     		.align	3
+ 710              	.L41:
+ 711 0398 00000000 		.word	htim1
+ 712 039c 62105839 		.word	962072674
+ 713 03a0 3410AB40 		.word	1084952628
+ 714 03a4 C710001C 		.word	469766343
+ 715 03a8 7BB6EB3F 		.word	1072412283
+ 716              		.cfi_endproc
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 19
+
+
+ 717              	.LFE370:
+ 719              		.section	.text.Sqrt,"ax",%progbits
+ 720              		.align	1
+ 721              		.global	Sqrt
+ 722              		.syntax unified
+ 723              		.thumb
+ 724              		.thumb_func
+ 726              	Sqrt:
+ 727              	.LVL105:
+ 728              	.LFB371:
+ 149:Core/Src/svpwm.c **** 
+ 150:Core/Src/svpwm.c **** /**
+ 151:Core/Src/svpwm.c ****  * @brief 对输入整数求平方根，当输入是负数的时候返回0
+ 152:Core/Src/svpwm.c ****  * @param  Input int32_t number
+ 153:Core/Src/svpwm.c ****  * @retval int32_t Square root of Input (0 if Input<0)
+ 154:Core/Src/svpwm.c ****  */
+ 155:Core/Src/svpwm.c **** int32_t Sqrt(int32_t wInput)
+ 156:Core/Src/svpwm.c **** {
+ 729              		.loc 1 156 1 is_stmt 1 view -0
+ 730              		.cfi_startproc
+ 731              		@ args = 0, pretend = 0, frame = 0
+ 732              		@ frame_needed = 0, uses_anonymous_args = 0
+ 733              		@ link register save eliminated.
+ 157:Core/Src/svpwm.c ****     int32_t wtemprootnew;
+ 734              		.loc 1 157 5 view .LVU232
+ 158:Core/Src/svpwm.c **** 
+ 159:Core/Src/svpwm.c ****     if (wInput > 0)
+ 735              		.loc 1 159 5 view .LVU233
+ 736              		.loc 1 159 8 is_stmt 0 view .LVU234
+ 737 0000 B0F1000C 		subs	ip, r0, #0
+ 738 0004 1CDD     		ble	.L48
+ 739              	.LBB2:
+ 160:Core/Src/svpwm.c ****     {
+ 161:Core/Src/svpwm.c ****         uint8_t biter = 0u;
+ 740              		.loc 1 161 9 is_stmt 1 view .LVU235
+ 741              	.LVL106:
+ 162:Core/Src/svpwm.c ****         int32_t wtemproot;
+ 742              		.loc 1 162 9 view .LVU236
+ 163:Core/Src/svpwm.c **** 
+ 164:Core/Src/svpwm.c ****         if (wInput <= ((int32_t)2097152))
+ 743              		.loc 1 164 9 view .LVU237
+ 744              		.loc 1 164 12 is_stmt 0 view .LVU238
+ 745 0006 BCF5001F 		cmp	ip, #2097152
+ 746 000a 02DC     		bgt	.L49
+ 165:Core/Src/svpwm.c ****         {
+ 166:Core/Src/svpwm.c ****             wtemproot = ((int32_t)128);
+ 747              		.loc 1 166 23 view .LVU239
+ 748 000c 8022     		movs	r2, #128
+ 749              	.L45:
+ 750 000e 0021     		movs	r1, #0
+ 751 0010 05E0     		b	.L47
+ 752              	.L49:
+ 167:Core/Src/svpwm.c ****         }
+ 168:Core/Src/svpwm.c ****         else
+ 169:Core/Src/svpwm.c ****         {
+ 170:Core/Src/svpwm.c ****             wtemproot = ((int32_t)8192);
+ 753              		.loc 1 170 23 view .LVU240
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 20
+
+
+ 754 0012 4FF40052 		mov	r2, #8192
+ 755 0016 FAE7     		b	.L45
+ 756              	.LVL107:
+ 757              	.L50:
+ 171:Core/Src/svpwm.c ****         }
+ 172:Core/Src/svpwm.c **** 
+ 173:Core/Src/svpwm.c ****         do
+ 174:Core/Src/svpwm.c ****         {
+ 175:Core/Src/svpwm.c ****             wtemprootnew = (wtemproot + (wInput / wtemproot)) / (int32_t)2;
+ 176:Core/Src/svpwm.c ****             if ((wtemprootnew == wtemproot) || ((int32_t)0 == wtemproot))
+ 177:Core/Src/svpwm.c ****             {
+ 178:Core/Src/svpwm.c ****                 biter = 6U;
+ 758              		.loc 1 178 23 view .LVU241
+ 759 0018 0621     		movs	r1, #6
+ 760              	.LVL108:
+ 761              	.L46:
+ 179:Core/Src/svpwm.c ****             }
+ 180:Core/Src/svpwm.c ****             else
+ 181:Core/Src/svpwm.c ****             {
+ 182:Core/Src/svpwm.c ****                 biter++;
+ 183:Core/Src/svpwm.c ****                 wtemproot = wtemprootnew;
+ 184:Core/Src/svpwm.c ****             }
+ 185:Core/Src/svpwm.c ****         } while (biter < 6U);
+ 762              		.loc 1 185 24 is_stmt 1 view .LVU242
+ 763 001a 0529     		cmp	r1, #5
+ 764 001c 0FD8     		bhi	.L52
+ 765              	.LVL109:
+ 766              	.L47:
+ 173:Core/Src/svpwm.c ****         {
+ 767              		.loc 1 173 9 view .LVU243
+ 175:Core/Src/svpwm.c ****             if ((wtemprootnew == wtemproot) || ((int32_t)0 == wtemproot))
+ 768              		.loc 1 175 13 view .LVU244
+ 175:Core/Src/svpwm.c ****             if ((wtemprootnew == wtemproot) || ((int32_t)0 == wtemproot))
+ 769              		.loc 1 175 49 is_stmt 0 view .LVU245
+ 770 001e 9CFBF2F3 		sdiv	r3, ip, r2
+ 175:Core/Src/svpwm.c ****             if ((wtemprootnew == wtemproot) || ((int32_t)0 == wtemproot))
+ 771              		.loc 1 175 39 view .LVU246
+ 772 0022 1344     		add	r3, r3, r2
+ 175:Core/Src/svpwm.c ****             if ((wtemprootnew == wtemproot) || ((int32_t)0 == wtemproot))
+ 773              		.loc 1 175 26 view .LVU247
+ 774 0024 03EBD373 		add	r3, r3, r3, lsr #31
+ 775 0028 5810     		asrs	r0, r3, #1
+ 776              	.LVL110:
+ 176:Core/Src/svpwm.c ****             {
+ 777              		.loc 1 176 13 is_stmt 1 view .LVU248
+ 176:Core/Src/svpwm.c ****             {
+ 778              		.loc 1 176 16 is_stmt 0 view .LVU249
+ 779 002a B2EB630F 		cmp	r2, r3, asr #1
+ 780 002e F3D0     		beq	.L50
+ 176:Core/Src/svpwm.c ****             {
+ 781              		.loc 1 176 45 discriminator 1 view .LVU250
+ 782 0030 1AB1     		cbz	r2, .L51
+ 182:Core/Src/svpwm.c ****                 wtemproot = wtemprootnew;
+ 783              		.loc 1 182 17 is_stmt 1 view .LVU251
+ 182:Core/Src/svpwm.c ****                 wtemproot = wtemprootnew;
+ 784              		.loc 1 182 22 is_stmt 0 view .LVU252
+ 785 0032 0131     		adds	r1, r1, #1
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 21
+
+
+ 786              	.LVL111:
+ 182:Core/Src/svpwm.c ****                 wtemproot = wtemprootnew;
+ 787              		.loc 1 182 22 view .LVU253
+ 788 0034 C9B2     		uxtb	r1, r1
+ 789              	.LVL112:
+ 183:Core/Src/svpwm.c ****             }
+ 790              		.loc 1 183 17 is_stmt 1 view .LVU254
+ 183:Core/Src/svpwm.c ****             }
+ 791              		.loc 1 183 27 is_stmt 0 view .LVU255
+ 792 0036 0246     		mov	r2, r0
+ 793 0038 EFE7     		b	.L46
+ 794              	.LVL113:
+ 795              	.L51:
+ 178:Core/Src/svpwm.c ****             }
+ 796              		.loc 1 178 23 view .LVU256
+ 797 003a 0621     		movs	r1, #6
+ 798              	.LVL114:
+ 178:Core/Src/svpwm.c ****             }
+ 799              		.loc 1 178 23 view .LVU257
+ 800 003c EDE7     		b	.L46
+ 801              	.LVL115:
+ 802              	.L52:
+ 178:Core/Src/svpwm.c ****             }
+ 803              		.loc 1 178 23 view .LVU258
+ 804 003e 7047     		bx	lr
+ 805              	.LVL116:
+ 806              	.L48:
+ 178:Core/Src/svpwm.c ****             }
+ 807              		.loc 1 178 23 view .LVU259
+ 808              	.LBE2:
+ 186:Core/Src/svpwm.c ****     }
+ 187:Core/Src/svpwm.c ****     else
+ 188:Core/Src/svpwm.c ****     {
+ 189:Core/Src/svpwm.c ****         wtemprootnew = (int32_t)0;
+ 809              		.loc 1 189 22 view .LVU260
+ 810 0040 0020     		movs	r0, #0
+ 811              	.LVL117:
+ 190:Core/Src/svpwm.c ****     }
+ 191:Core/Src/svpwm.c **** 
+ 192:Core/Src/svpwm.c ****     return (wtemprootnew);
+ 812              		.loc 1 192 5 is_stmt 1 view .LVU261
+ 193:Core/Src/svpwm.c **** }...
+ 813              		.loc 1 193 1 is_stmt 0 view .LVU262
+ 814 0042 7047     		bx	lr
+ 815              		.cfi_endproc
+ 816              	.LFE371:
+ 818              		.text
+ 819              	.Letext0:
+ 820              		.file 2 "c:\\program files (x86)\\arm gnu toolchain arm-none-eabi\\12.3 rel1\\arm-none-eabi\\inclu
+ 821              		.file 3 "c:\\program files (x86)\\arm gnu toolchain arm-none-eabi\\12.3 rel1\\arm-none-eabi\\inclu
+ 822              		.file 4 "Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g431xx.h"
+ 823              		.file 5 "Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_def.h"
+ 824              		.file 6 "Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_dma.h"
+ 825              		.file 7 "Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h"
+ 826              		.file 8 "Drivers/CMSIS/DSP/Include/arm_math.h"
+ 827              		.file 9 "Core/Inc/tim.h"
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s 			page 22
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 svpwm.c
+C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s:27     .text.Svpwm:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s:33     .text.Svpwm:00000000 Svpwm
+C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s:711    .text.Svpwm:00000398 $d
+C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s:720    .text.Sqrt:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc9CqqYe.s:726    .text.Sqrt:00000000 Sqrt
+
+UNDEFINED SYMBOLS
+__aeabi_f2d
+__aeabi_ddiv
+__aeabi_d2f
+__aeabi_dmul
+__aeabi_dadd
+__aeabi_dsub
+htim1
