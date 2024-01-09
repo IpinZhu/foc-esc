@@ -16,6 +16,9 @@
 #include "tim.h"
 #include "adc.h"
 #include "usart.h"
+#include "test.h"
+#include "arm_math.h"
+#include "svpwm.h"
 
 extern TIM_HandleTypeDef htim1;
 

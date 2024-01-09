@@ -24,6 +24,7 @@ extern TIM_HandleTypeDef htim1;
 #define TS 2000
 
 void Svpwm(float32_t ualpha, float32_t ubeta, float32_t Udc);
+int32_t Sqrt(int32_t wInput);
 
 
 #endif // !_SVPWM_H

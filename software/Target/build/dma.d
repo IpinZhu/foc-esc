@@ -1,4 +1,4 @@
-build/test.o: Core/Src/test.c Core/Inc/test.h Core/Inc/main.h \
+build/dma.o: Core/Src/dma.c Core/Inc/dma.h Core/Inc/main.h \
  Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal.h \
  Core/Inc/stm32g4xx_hal_conf.h \
  Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_rcc.h \
@@ -31,14 +31,8 @@ build/test.o: Core/Src/test.c Core/Inc/test.h Core/Inc/main.h \
  Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h \
  Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h \
  Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart.h \
- Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart_ex.h Core/Inc/tim.h \
- Core/Inc/adc.h Core/Inc/usart.h Core/Inc/test.h \
- Drivers/CMSIS/DSP/Include/arm_math.h \
- Drivers/CMSIS/Include/cmsis_compiler.h Core/Inc/svpwm.h \
- Drivers/CMSIS/DSP/Include/arm_const_structs.h \
- Drivers/CMSIS/DSP/Include/arm_math.h \
- Drivers/CMSIS/DSP/Include/arm_common_tables.h
-Core/Inc/test.h:
+ Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart_ex.h
+Core/Inc/dma.h:
 Core/Inc/main.h:
 Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal.h:
 Core/Inc/stm32g4xx_hal_conf.h:
@@ -75,13 +69,3 @@ Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h:
 Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h:
 Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart.h:
 Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart_ex.h:
-Core/Inc/tim.h:
-Core/Inc/adc.h:
-Core/Inc/usart.h:
-Core/Inc/test.h:
-Drivers/CMSIS/DSP/Include/arm_math.h:
-Drivers/CMSIS/Include/cmsis_compiler.h:
-Core/Inc/svpwm.h:
-Drivers/CMSIS/DSP/Include/arm_const_structs.h:
-Drivers/CMSIS/DSP/Include/arm_math.h:
-Drivers/CMSIS/DSP/Include/arm_common_tables.h:

@@ -14,10 +14,17 @@
 void PWM_Test()
 {
     HAL_TIM_Base_Start(&htim1);
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1 | TIM_CHANNEL_2 | TIM_CHANNEL_3);
     __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, 500);
     __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_2, 500);
     __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_3, 500);
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
+
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
+
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_3);
 }
 
 void ADC_Get()
@@ -34,5 +41,20 @@ void ADC_Get()
     HAL_UART_Transmit(&huart1, "\n", 2U, 10);
     HAL_UART_Transmit(&huart1, Udc, 2U, 10);
     HAL_UART_Transmit(&huart1, "\n", 2U, 10);
-    
+}
+
+
+void step(float32_t zeta)
+{
+
+    float32_t Id = 0, Iq = 10;
+    float32_t Sinzeta, Coszeta;
+    float32_t Ustep[2] = {0};
+
+    Coszeta = arm_cos_f32(zeta);
+    Sinzeta = arm_sin_f32(zeta);
+
+    arm_inv_park_f32(Id, Iq, Ustep, Ustep + 1, Sinzeta, Coszeta);
+    Svpwm(Ustep[0], Ustep[1], 10);
+
 }
