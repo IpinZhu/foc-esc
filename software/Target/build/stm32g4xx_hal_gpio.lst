@@ -1,4 +1,4 @@
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 1
 
 
    1              		.cpu cortex-m4
@@ -58,7 +58,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
   27:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****     (+) Each port bit of the general-purpose I/O (GPIO) ports can be individually
   28:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****         configured by software in several modes:
   29:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****         (++) Input mode
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 2
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 2
 
 
   30:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****         (++) Analog mode
@@ -118,7 +118,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
   84:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****     (#) To set/reset the level of a pin configured in output mode use
   85:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****         HAL_GPIO_WritePin()/HAL_GPIO_TogglePin().
   86:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c **** 
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 3
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 3
 
 
   87:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****    (#) To lock pin configuration until next reset use HAL_GPIO_LockPin().
@@ -178,7 +178,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  141:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   */
  142:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c **** 
  143:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c **** /** @defgroup GPIO_Exported_Functions_Group1 Initialization/de-initialization functions
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 4
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 4
 
 
  144:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   *  @brief    Initialization and Configuration functions
@@ -238,7 +238,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
   53              		.loc 1 174 3 view .LVU8
  164:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   uint32_t iocurrent;
   54              		.loc 1 164 12 is_stmt 0 view .LVU9
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 5
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 5
 
 
   55 0004 0023     		movs	r3, #0
@@ -298,7 +298,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
   88              	.LVL6:
  196:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****         temp &= ~(GPIO_OTYPER_OT0 << position) ;
   89              		.loc 1 196 9 is_stmt 1 view .LVU26
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 6
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 6
 
 
   90              		.loc 1 196 14 is_stmt 0 view .LVU27
@@ -358,7 +358,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  118              		.loc 1 222 9 is_stmt 1 view .LVU40
  119              		.loc 1 222 38 is_stmt 0 view .LVU41
  120 0038 03F0070C 		and	ip, r3, #7
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 7
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 7
 
 
  121              		.loc 1 222 47 view .LVU42
@@ -418,7 +418,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  154              		.loc 1 243 9 is_stmt 1 discriminator 24 view .LVU54
  155              		.loc 1 243 40 is_stmt 0 discriminator 24 view .LVU55
  156 0068 0CF1020C 		add	ip, ip, #2
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 8
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 8
 
 
  157 006c 554D     		ldr	r5, .L24
@@ -478,7 +478,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  198 0098 01D0     		beq	.L9
  257:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****         {
  258:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****           temp |= iocurrent;
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 9
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 9
 
 
  199              		.loc 1 258 11 is_stmt 1 view .LVU74
@@ -538,7 +538,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  238              		.loc 1 273 9 is_stmt 1 view .LVU92
  239              		.loc 1 273 23 is_stmt 0 view .LVU93
  240 00bc 4E68     		ldr	r6, [r1, #4]
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 10
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 10
 
 
  241              		.loc 1 273 12 view .LVU94
@@ -598,7 +598,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  183:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****          ((GPIO_Init->Mode & GPIO_MODE) == MODE_AF))
  279              		.loc 1 183 7 is_stmt 1 view .LVU110
  183:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****          ((GPIO_Init->Mode & GPIO_MODE) == MODE_AF))
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 11
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 11
 
 
  280              		.loc 1 183 21 is_stmt 0 view .LVU111
@@ -658,7 +658,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  209:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****         GPIOx->PUPDR = temp;
  317              		.loc 1 209 14 view .LVU129
  318 010e 44EA0C04 		orr	r4, r4, ip
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 12
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 12
 
 
  319              	.LVL35:
@@ -718,7 +718,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  356              	.LVL39:
  231:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c **** 
  357              		.loc 1 231 7 is_stmt 1 view .LVU147
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 13
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 13
 
 
  231:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c **** 
@@ -778,7 +778,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  396 016e 4FEA8E0E 		lsl	lr, lr, #2
  241:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****         temp |= (GPIO_GET_INDEX(GPIOx) << (4U * (position & 0x03U)));
  397              		.loc 1 241 26 view .LVU164
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 14
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 14
 
 
  398 0172 0F24     		movs	r4, #15
@@ -838,7 +838,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  443              	.L20:
  282:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   }
  283:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c **** }
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 15
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 15
 
 
  444              		.loc 1 283 1 view .LVU174
@@ -898,7 +898,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  294:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   uint32_t iocurrent;
  480              		.loc 1 294 12 is_stmt 0 view .LVU182
  481 0000 0023     		movs	r3, #0
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 16
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 16
 
 
  482              	.LVL46:
@@ -958,7 +958,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  328:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c **** 
  329:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****       /*------------------------- GPIO Mode Configuration --------------------*/
  330:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****       /* Configure IO in Analog Mode */
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 17
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 17
 
 
  331:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****       GPIOx->MODER |= (GPIO_MODER_MODE0 << (position * 2u));
@@ -1018,7 +1018,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  552              		.loc 1 343 12 is_stmt 0 view .LVU207
  553 005c 8268     		ldr	r2, [r0, #8]
  554              		.loc 1 343 22 view .LVU208
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 18
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 18
 
 
  555 005e 22EA0C02 		bic	r2, r2, ip
@@ -1078,7 +1078,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  593 008e 05FA0CF6 		lsl	r6, r5, ip
  314:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****       if (tmp == (GPIO_GET_INDEX(GPIOx) << (4U * (position & 0x03U))))
  594              		.loc 1 314 11 view .LVU224
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 19
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 19
 
 
  595 0092 3440     		ands	r4, r4, r6
@@ -1138,7 +1138,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  639 00d4 104C     		ldr	r4, .L45+8
  640              	.LVL56:
  318:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****         EXTI->EMR1 &= ~(iocurrent);
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 20
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 20
 
 
  641              		.loc 1 318 13 view .LVU235
@@ -1198,7 +1198,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  348:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c **** }
  679              		.loc 1 348 1 view .LVU251
  680 010a F0BD     		pop	{r4, r5, r6, r7, pc}
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 21
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 21
 
 
  681              	.LVL60:
@@ -1258,7 +1258,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  711              		.loc 1 374 1 is_stmt 1 view -0
  712              		.cfi_startproc
  713              		@ args = 0, pretend = 0, frame = 0
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 22
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 22
 
 
  714              		@ frame_needed = 0, uses_anonymous_args = 0
@@ -1318,7 +1318,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  395:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   *         accesses. In this way, there is no risk of an IRQ occurring between
  396:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   *         the read and the modify access.
  397:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   *
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 23
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 23
 
 
  398:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   * @param  GPIOx where x can be (A..G) to select the GPIO peripheral for STM32G4xx family
@@ -1378,7 +1378,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  782              	.LFB333:
  422:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c **** 
  423:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c **** /**
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 24
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 24
 
 
  424:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   * @brief  Toggle the specified GPIO pin.
@@ -1438,7 +1438,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  444:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c **** /**
  445:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   * @brief  Lock GPIO Pins configuration registers.
  446:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   * @note   The locked registers are GPIOx_MODER, GPIOx_OTYPER, GPIOx_OSPEEDR,
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 25
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 25
 
 
  447:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   *         GPIOx_PUPDR, GPIOx_AFRL and GPIOx_AFRH.
@@ -1498,7 +1498,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  849 0016 C361     		str	r3, [r0, #28]
  471:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   /* Read LCKK register. This read is mandatory to complete key lock sequence */
  472:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   tmp = GPIOx->LCKR;
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 26
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 26
 
 
  850              		.loc 1 472 3 is_stmt 1 view .LVU299
@@ -1558,7 +1558,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  893              	.LFB336:
  484:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c **** 
  485:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c **** /**
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 27
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 27
 
 
  486:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c ****   * @brief  Handle EXTI interrupt request.
@@ -1618,7 +1618,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  920 0000 08B5     		push	{r3, lr}
  921              	.LCFI8:
  922              		.cfi_def_cfa_offset 8
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 28
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 28
 
 
  923              		.cfi_offset 3, -8
@@ -1664,29 +1664,29 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 1
  957              		.file 4 "Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g431xx.h"
  958              		.file 5 "Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_def.h"
  959              		.file 6 "Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_gpio.h"
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s 			page 29
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s 			page 29
 
 
 DEFINED SYMBOLS
                             *ABS*:00000000 stm32g4xx_hal_gpio.c
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:21     .text.HAL_GPIO_Init:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:27     .text.HAL_GPIO_Init:00000000 HAL_GPIO_Init
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:453    .text.HAL_GPIO_Init:000001c4 $d
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:461    .text.HAL_GPIO_DeInit:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:467    .text.HAL_GPIO_DeInit:00000000 HAL_GPIO_DeInit
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:695    .text.HAL_GPIO_DeInit:00000110 $d
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:702    .text.HAL_GPIO_ReadPin:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:708    .text.HAL_GPIO_ReadPin:00000000 HAL_GPIO_ReadPin
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:741    .text.HAL_GPIO_WritePin:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:747    .text.HAL_GPIO_WritePin:00000000 HAL_GPIO_WritePin
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:774    .text.HAL_GPIO_TogglePin:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:780    .text.HAL_GPIO_TogglePin:00000000 HAL_GPIO_TogglePin
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:810    .text.HAL_GPIO_LockPin:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:816    .text.HAL_GPIO_LockPin:00000000 HAL_GPIO_LockPin
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:885    .text.HAL_GPIO_EXTI_Callback:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:891    .text.HAL_GPIO_EXTI_Callback:00000000 HAL_GPIO_EXTI_Callback
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:906    .text.HAL_GPIO_EXTI_IRQHandler:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:912    .text.HAL_GPIO_EXTI_IRQHandler:00000000 HAL_GPIO_EXTI_IRQHandler
-C:\Users\Booster\AppData\Local\Temp\cccNkR1c.s:949    .text.HAL_GPIO_EXTI_IRQHandler:00000018 $d
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:21     .text.HAL_GPIO_Init:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:27     .text.HAL_GPIO_Init:00000000 HAL_GPIO_Init
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:453    .text.HAL_GPIO_Init:000001c4 $d
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:461    .text.HAL_GPIO_DeInit:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:467    .text.HAL_GPIO_DeInit:00000000 HAL_GPIO_DeInit
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:695    .text.HAL_GPIO_DeInit:00000110 $d
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:702    .text.HAL_GPIO_ReadPin:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:708    .text.HAL_GPIO_ReadPin:00000000 HAL_GPIO_ReadPin
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:741    .text.HAL_GPIO_WritePin:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:747    .text.HAL_GPIO_WritePin:00000000 HAL_GPIO_WritePin
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:774    .text.HAL_GPIO_TogglePin:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:780    .text.HAL_GPIO_TogglePin:00000000 HAL_GPIO_TogglePin
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:810    .text.HAL_GPIO_LockPin:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:816    .text.HAL_GPIO_LockPin:00000000 HAL_GPIO_LockPin
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:885    .text.HAL_GPIO_EXTI_Callback:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:891    .text.HAL_GPIO_EXTI_Callback:00000000 HAL_GPIO_EXTI_Callback
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:906    .text.HAL_GPIO_EXTI_IRQHandler:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:912    .text.HAL_GPIO_EXTI_IRQHandler:00000000 HAL_GPIO_EXTI_IRQHandler
+C:\Users\Booster\AppData\Local\Temp\cckFopZ4.s:949    .text.HAL_GPIO_EXTI_IRQHandler:00000018 $d
 
 NO UNDEFINED SYMBOLS

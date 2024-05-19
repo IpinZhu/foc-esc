@@ -19,6 +19,7 @@
 #include "test.h"
 #include "arm_math.h"
 #include "svpwm.h"
+#include "constant.h"
 
 extern TIM_HandleTypeDef htim1;
 
@@ -29,5 +30,6 @@ extern UART_HandleTypeDef huart1;
 
 void PWM_Test();
 void ADC_Get();
+void OpenLoopStep(float32_t zeta);
 
 #endif // !_TEST_H

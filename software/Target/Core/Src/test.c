@@ -14,17 +14,12 @@
 void PWM_Test()
 {
     HAL_TIM_Base_Start(&htim1);
-    __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, 500);
-    __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_2, 500);
-    __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_3, 500);
+    __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, 2000);
+    __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_2, 2000);
+    __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_3, 2000);
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
-
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
-
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
-    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_3);
 }
 
 void ADC_Get()
@@ -44,7 +39,7 @@ void ADC_Get()
 }
 
 
-void step(float32_t zeta)
+void OpenLoopStep(float32_t zeta)
 {
 
     float32_t Id = 0, Iq = 10;

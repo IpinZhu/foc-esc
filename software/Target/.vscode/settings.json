@@ -25,7 +25,8 @@
         "tim.h": "c",
         "adc.h": "c",
         "usart.h": "c",
-        "svpwm.h": "c"
+        "svpwm.h": "c",
+        "constant.h": "c"
     }
 
 }

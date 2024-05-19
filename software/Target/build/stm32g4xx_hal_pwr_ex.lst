@@ -1,4 +1,4 @@
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 1
 
 
    1              		.cpu cortex-m4
@@ -58,7 +58,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
   28:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   * @{
   29:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   */
   30:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** 
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 2
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 2
 
 
   31:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** /** @defgroup PWREx PWREx
@@ -118,7 +118,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
   85:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** 
   86:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** /** @defgroup PWREx_Exported_Functions PWR Extended Exported Functions
   87:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   * @{
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 3
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 3
 
 
   88:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   */
@@ -178,7 +178,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  122:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****     return PWR_REGULATOR_VOLTAGE_SCALE1_BOOST;
  123:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   }
  124:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** }
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 4
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 4
 
 
   49              		.loc 1 124 1 view .LVU7
@@ -238,7 +238,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
   74              		@ args = 0, pretend = 0, frame = 0
   75              		@ frame_needed = 0, uses_anonymous_args = 0
   76              		@ link register save eliminated.
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 5
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 5
 
 
  155:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   uint32_t wait_loop_index;
@@ -298,7 +298,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  190:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****     /* If current range is range 2 */
  191:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****     if (READ_BIT(PWR->CR1, PWR_CR1_VOS) == PWR_REGULATOR_VOLTAGE_SCALE2)
  192:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****     {
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 6
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 6
 
 
  193:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****       /* Make sure Range 1 Boost is disabled */
@@ -358,7 +358,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  171:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****       while ((HAL_IS_BIT_SET(PWR->SR2, PWR_SR2_VOSF)) && (wait_loop_index != 0U))
  114              		.loc 1 171 53 is_stmt 0 view .LVU23
  115 003e 314B     		ldr	r3, .L23+4
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 7
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 7
 
 
  116 0040 1B68     		ldr	r3, [r3]
@@ -418,7 +418,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  156 006e 0020     		movs	r0, #0
  157              	.LVL6:
  158              		.loc 1 225 10 view .LVU39
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 8
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 8
 
 
  159 0070 7047     		bx	lr
@@ -478,7 +478,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  204              		.loc 1 197 7 view .LVU52
  205 00b8 1368     		ldr	r3, [r2]
  206 00ba 23F4C063 		bic	r3, r3, #1536
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 9
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 9
 
 
  207 00be 43F40073 		orr	r3, r3, #512
@@ -538,7 +538,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  246              		.loc 1 205 11 view .LVU67
  247 00ec 5B69     		ldr	r3, [r3, #20]
  205:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****       {
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 10
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 10
 
 
  248              		.loc 1 205 10 view .LVU68
@@ -598,7 +598,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  238:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** void HAL_PWREx_EnableBatteryCharging(uint32_t ResistorSelection)
  239:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** {
  289              		.loc 1 239 1 is_stmt 1 view -0
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 11
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 11
 
 
  290              		.cfi_startproc
@@ -658,7 +658,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  329 0000 024A     		ldr	r2, .L29
  330 0002 D368     		ldr	r3, [r2, #12]
  331 0004 23F48073 		bic	r3, r3, #256
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 12
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 12
 
 
  332 0008 D360     		str	r3, [r2, #12]
@@ -718,7 +718,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  268:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** 
  269:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** 
  270:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** /**
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 13
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 13
 
 
  271:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   * @brief Disable Internal Wake-up Line.
@@ -778,7 +778,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  298:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   *         I/O pins are available) or the logical OR of several of them to set
  299:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   *         several bits for a given port in a single API call.
  300:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   * @retval HAL Status
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 14
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 14
 
 
  301:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   */
@@ -838,7 +838,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  447 0028 0020     		movs	r0, #0
  448              		.loc 1 314 8 view .LVU100
  449 002a 7047     		bx	lr
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 15
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 15
 
 
  450              	.LVL24:
@@ -898,7 +898,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  492 005c 0A43     		orrs	r2, r2, r1
  493 005e 9A63     		str	r2, [r3, #56]
  325:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****        CLEAR_BIT(PWR->PDCRD, GPIONumber);
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 16
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 16
 
 
  494              		.loc 1 325 8 view .LVU113
@@ -958,7 +958,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  537              		.loc 1 334 8 view .LVU125
  304:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** 
  538              		.loc 1 304 21 is_stmt 0 view .LVU126
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 17
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 17
 
 
  539 0098 0020     		movs	r0, #0
@@ -1018,7 +1018,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  581              		.thumb
  582              		.thumb_func
  584              	HAL_PWREx_DisableGPIOPullUp:
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 18
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 18
 
 
  585              	.LVL41:
@@ -1078,7 +1078,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  611 0012 136A     		ldr	r3, [r2, #32]
  612 0014 21F48041 		bic	r1, r1, #16384
  613              	.LVL42:
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 19
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 19
 
 
  614              		.loc 1 373 8 is_stmt 0 view .LVU143
@@ -1138,7 +1138,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  383:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****        break;
  656              		.loc 1 383 8 view .LVU156
  365:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** 
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 20
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 20
 
 
  657              		.loc 1 365 21 is_stmt 0 view .LVU157
@@ -1198,7 +1198,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  701 0078 23EA0103 		bic	r3, r3, r1
  702 007c 1365     		str	r3, [r2, #80]
  392:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****        break;
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 21
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 21
 
 
  703              		.loc 1 392 8 is_stmt 1 view .LVU170
@@ -1258,7 +1258,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  416:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   *         (or PWR_GPIO_I depending on the devices) to select the GPIO peripheral.
  417:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   * @param  GPIONumber: Specify the I/O pins numbers.
  418:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   *         This parameter can be one of the following values:
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 22
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 22
 
 
  419:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   *         PWR_GPIO_BIT_0, ..., PWR_GPIO_BIT_15 (except for the port where less
@@ -1318,7 +1318,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  436:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****        break;
  771              		.loc 1 436 8 is_stmt 1 view .LVU185
  426:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** 
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 23
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 23
 
 
  772              		.loc 1 426 21 is_stmt 0 view .LVU186
@@ -1378,7 +1378,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  814              		.loc 1 446 8 is_stmt 1 view .LVU199
  815 0058 174B     		ldr	r3, .L74
  816 005a DA6B     		ldr	r2, [r3, #60]
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 24
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 24
 
 
  817 005c 0A43     		orrs	r2, r2, r1
@@ -1438,7 +1438,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  860 0092 22EA0102 		bic	r2, r2, r1
  861 0096 9A64     		str	r2, [r3, #72]
  456:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****        break;
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 25
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 25
 
 
  862              		.loc 1 456 8 view .LVU212
@@ -1498,7 +1498,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  903              		.align	1
  904              		.global	HAL_PWREx_DisableGPIOPullDown
  905              		.syntax unified
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 26
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 26
 
 
  906              		.thumb
@@ -1558,7 +1558,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  495:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****        CLEAR_BIT(PWR->PDCRA, (GPIONumber & (~(PWR_GPIO_BIT_13|PWR_GPIO_BIT_15))));
  934              		.loc 1 495 8 view .LVU229
  935 0010 1C4A     		ldr	r2, .L87
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 27
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 27
 
 
  936 0012 536A     		ldr	r3, [r2, #36]
@@ -1618,7 +1618,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  504:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****        CLEAR_BIT(PWR->PDCRD, GPIONumber);
  979              		.loc 1 504 8 is_stmt 1 view .LVU243
  980 0042 104A     		ldr	r2, .L87
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 28
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 28
 
 
  981 0044 D36B     		ldr	r3, [r2, #60]
@@ -1678,7 +1678,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1023              		.loc 1 513 8 is_stmt 1 view .LVU256
  1024 0074 034B     		ldr	r3, .L87
  1025 0076 5A6D     		ldr	r2, [r3, #84]
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 29
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 29
 
 
  1026 0078 5A65     		str	r2, [r3, #84]
@@ -1738,7 +1738,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1057              		.loc 1 536 1 is_stmt 1 view -0
  1058              		.cfi_startproc
  1059              		@ args = 0, pretend = 0, frame = 0
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 30
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 30
 
 
  1060              		@ frame_needed = 0, uses_anonymous_args = 0
@@ -1798,7 +1798,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1102              	.LFE340:
  1104              		.section	.text.HAL_PWREx_EnableSRAM2ContentRetention,"ax",%progbits
  1105              		.align	1
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 31
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 31
 
 
  1106              		.global	HAL_PWREx_EnableSRAM2ContentRetention
@@ -1858,7 +1858,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  573:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** {
  1141              		.loc 1 573 1 is_stmt 1 view -0
  1142              		.cfi_startproc
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 32
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 32
 
 
  1143              		@ args = 0, pretend = 0, frame = 0
@@ -1918,7 +1918,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1184 000c 00700040 		.word	1073770496
  1185              		.cfi_endproc
  1186              	.LFE343:
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 33
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 33
 
 
  1188              		.section	.text.HAL_PWREx_DisablePVM1,"ax",%progbits
@@ -1978,7 +1978,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1226              		.cfi_startproc
  1227              		@ args = 0, pretend = 0, frame = 0
  1228              		@ frame_needed = 0, uses_anonymous_args = 0
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 34
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 34
 
 
  1229              		@ link register save eliminated.
@@ -2038,7 +2038,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1275              		.syntax unified
  1276              		.thumb
  1277              		.thumb_func
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 35
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 35
 
 
  1279              	HAL_PWREx_EnablePVM3:
@@ -2098,7 +2098,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1316 0002 5368     		ldr	r3, [r2, #4]
  1317 0004 23F04003 		bic	r3, r3, #64
  1318 0008 5360     		str	r3, [r2, #4]
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 36
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 36
 
 
  638:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** }
@@ -2158,7 +2158,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  650:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** /**
  651:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   * @brief Disable the Power Voltage Monitoring 4: VDDA versus OPAMP/DAC minimum voltage 1.8V.
  652:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   * @retval None
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 37
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 37
 
 
  653:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   */
@@ -2218,7 +2218,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1398              		@ link register save eliminated.
  676:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   HAL_StatusTypeDef status = HAL_OK;
  1399              		.loc 1 676 3 view .LVU300
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 38
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 38
 
 
  677:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** 
@@ -2278,7 +2278,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  718:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****       break;
  719:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** #endif /* PWR_CR2_PVME1 */
  720:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** 
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 39
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 39
 
 
  721:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** #if defined(PWR_CR2_PVME2)
@@ -2338,7 +2338,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1449 004e 664A     		ldr	r2, .L150
  1450 0050 536A     		ldr	r3, [r2, #36]
  1451 0052 43F01003 		orr	r3, r3, #16
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 40
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 40
 
 
  1452 0056 5362     		str	r3, [r2, #36]
@@ -2398,7 +2398,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  686:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   {
  1491              		.loc 1 686 3 view .LVU330
  1492 0086 802B     		cmp	r3, #128
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 41
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 41
 
 
  1493 0088 36D1     		bne	.L149
@@ -2458,7 +2458,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  790:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****       __HAL_PWR_PVM4_EXTI_DISABLE_RISING_EDGE();
  1507              		.loc 1 790 7 view .LVU334
  1508 00a4 9A6A     		ldr	r2, [r3, #40]
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 42
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 42
 
 
  1509 00a6 22F04002 		bic	r2, r2, #64
@@ -2518,7 +2518,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1546              	.L143:
  808:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****       }
  809:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** 
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 43
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 43
 
 
  810:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****       if((sConfigPVM->Mode & PVM_FALLING_EDGE) == PVM_FALLING_EDGE)
@@ -2578,7 +2578,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1589              		.loc 1 697 7 view .LVU359
  697:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****       {
  1590              		.loc 1 697 21 is_stmt 0 view .LVU360
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 44
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 44
 
 
  1591 011e 4368     		ldr	r3, [r0, #4]
@@ -2638,7 +2638,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1631              		.loc 1 716 9 is_stmt 1 view .LVU374
  1632 015c 224A     		ldr	r2, .L150
  1633 015e D36A     		ldr	r3, [r2, #44]
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 45
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 45
 
 
  1634 0160 43F00803 		orr	r3, r3, #8
@@ -2698,7 +2698,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1675              		.loc 1 768 9 view .LVU387
  1676 01a0 13F4003F 		tst	r3, #131072
  1677 01a4 04D0     		beq	.L139
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 46
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 46
 
 
  770:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****       }
@@ -2758,7 +2758,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1719              	.LVL112:
  1720              	.L145:
  676:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** 
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 47
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 47
 
 
  1721              		.loc 1 676 21 view .LVU401
@@ -2818,7 +2818,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  829:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   *        Flash in power-down monde in setting the RUN_PD bit in FLASH_ACR register.
  830:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   *        Additionally, the clock frequency must be reduced below 2 MHz.
  831:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   *        Setting RUN_PD in FLASH_ACR then appropriately reducing the clock frequency must
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 48
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 48
 
 
  832:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   *        be done before calling HAL_PWREx_EnableLowPowerRunMode() API.
@@ -2878,7 +2878,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  854:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   /* Clear LPR bit */
  855:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   CLEAR_BIT(PWR->CR1, PWR_CR1_LPR);
  1791              		.loc 1 855 3 view .LVU413
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 49
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 49
 
 
  1792 0000 124A     		ldr	r2, .L161
@@ -2938,7 +2938,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1834 003a 5B69     		ldr	r3, [r3, #20]
  1835              		.loc 1 863 6 view .LVU428
  1836 003c 13F4007F 		tst	r3, #512
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 50
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 50
 
 
  1837 0040 01D1     		bne	.L160
@@ -2998,7 +2998,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  892:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   * @retval None
  893:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   */
  894:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** void HAL_PWREx_EnterSTOP0Mode(uint8_t STOPEntry)
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 51
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 51
 
 
  895:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** {
@@ -3058,7 +3058,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1896              	@ 0 "" 2
  1897              		.thumb
  1898              		.syntax unified
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 52
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 52
 
 
  1899              	.L165:
@@ -3118,7 +3118,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  937:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   *         is set.
  938:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   * @note  Due to low power mode, an additional startup delay is incurred when waking up from Stop 
  939:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   * @param STOPEntry  specifies if Stop mode in entered with WFI or WFE instruction.
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 53
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 53
 
 
  940:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   *          This parameter can be one of the following values:
@@ -3178,7 +3178,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  1961              	@ 966 "Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c" 1
  1962 001e 20BF     		wfe
  1963              	@ 0 "" 2
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 54
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 54
 
 
  967:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****     __WFE();
@@ -3238,7 +3238,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  982:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   *        The BOR is not available.
  983:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   * @note  The I/Os can be configured either with a pull-up or pull-down or can be kept in analog s
  984:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   * @retval None
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 55
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 55
 
 
  985:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   */
@@ -3298,7 +3298,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  2042              		.thumb_func
  2044              	HAL_PWREx_PVM1Callback:
  2045              	.LFB358:
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 56
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 56
 
 
 1002:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** 
@@ -3358,7 +3358,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
 1056:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****     /* Clear PVM4 exti pending bit */
 1057:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****     __HAL_PWR_PVM4_EXTI_CLEAR_FLAG();
 1058:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   }
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 57
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 57
 
 
 1059:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** }
@@ -3418,7 +3418,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  2076              		.align	1
  2077              		.weak	HAL_PWREx_PVM3Callback
  2078              		.syntax unified
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 58
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 58
 
 
  2079              		.thumb
@@ -3478,7 +3478,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  2114              		.align	1
  2115              		.global	HAL_PWREx_PVD_PVM_IRQHandler
  2116              		.syntax unified
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 59
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 59
 
 
  2117              		.thumb
@@ -3538,7 +3538,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  2159              		.loc 1 1043 5 view .LVU481
  2160 0024 13F0200F 		tst	r3, #32
  2161 0028 18D1     		bne	.L192
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 60
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 60
 
 
  2162              	.L186:
@@ -3598,7 +3598,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  2204              		.loc 1 1049 5 view .LVU493
  2205 0060 044B     		ldr	r3, .L194
  2206 0062 2022     		movs	r2, #32
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 61
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 61
 
 
  2207 0064 5A63     		str	r2, [r3, #52]
@@ -3658,7 +3658,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  2249              	.L197:
  2250 000c 00700040 		.word	1073770496
  2251              		.cfi_endproc
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 62
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 62
 
 
  2252              	.LFE362:
@@ -3718,7 +3718,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
 1139:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   * @retval None
 1140:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c ****   */
 1141:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** void HAL_PWREx_EnableUCPDDeadBattery(void)
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 63
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 63
 
 
 1142:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** {
@@ -3778,7 +3778,7 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  2328 0008 9360     		str	r3, [r2, #8]
 1161:Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c **** }
  2329              		.loc 1 1161 1 is_stmt 0 view .LVU508
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 64
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 64
 
 
  2330 000a 7047     		bx	lr
@@ -3798,136 +3798,136 @@ ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 1
  2345              		.file 7 "Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h"
  2346              		.file 8 "Drivers/CMSIS/Device/ST/STM32G4xx/Include/system_stm32g4xx.h"
  2347              		.file 9 "Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr.h"
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 65
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 65
 
 
 DEFINED SYMBOLS
                             *ABS*:00000000 stm32g4xx_hal_pwr_ex.c
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:21     .text.HAL_PWREx_GetVoltageRange:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:27     .text.HAL_PWREx_GetVoltageRange:00000000 HAL_PWREx_GetVoltageRange
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:58     .text.HAL_PWREx_GetVoltageRange:00000020 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:63     .text.HAL_PWREx_ControlVoltageScaling:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:69     .text.HAL_PWREx_ControlVoltageScaling:00000000 HAL_PWREx_ControlVoltageScaling
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:273    .text.HAL_PWREx_ControlVoltageScaling:00000100 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:280    .text.HAL_PWREx_EnableBatteryCharging:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:286    .text.HAL_PWREx_EnableBatteryCharging:00000000 HAL_PWREx_EnableBatteryCharging
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:310    .text.HAL_PWREx_EnableBatteryCharging:00000018 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:315    .text.HAL_PWREx_DisableBatteryCharging:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:321    .text.HAL_PWREx_DisableBatteryCharging:00000000 HAL_PWREx_DisableBatteryCharging
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:338    .text.HAL_PWREx_DisableBatteryCharging:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:343    .text.HAL_PWREx_EnableInternalWakeUpLine:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:349    .text.HAL_PWREx_EnableInternalWakeUpLine:00000000 HAL_PWREx_EnableInternalWakeUpLine
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:366    .text.HAL_PWREx_EnableInternalWakeUpLine:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:371    .text.HAL_PWREx_DisableInternalWakeUpLine:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:377    .text.HAL_PWREx_DisableInternalWakeUpLine:00000000 HAL_PWREx_DisableInternalWakeUpLine
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:394    .text.HAL_PWREx_DisableInternalWakeUpLine:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:399    .text.HAL_PWREx_EnableGPIOPullUp:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:405    .text.HAL_PWREx_EnableGPIOPullUp:00000000 HAL_PWREx_EnableGPIOPullUp
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:421    .text.HAL_PWREx_EnableGPIOPullUp:00000008 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:573    .text.HAL_PWREx_EnableGPIOPullUp:000000b4 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:578    .text.HAL_PWREx_DisableGPIOPullUp:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:584    .text.HAL_PWREx_DisableGPIOPullUp:00000000 HAL_PWREx_DisableGPIOPullUp
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:600    .text.HAL_PWREx_DisableGPIOPullUp:00000008 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:720    .text.HAL_PWREx_DisableGPIOPullUp:00000088 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:725    .text.HAL_PWREx_EnableGPIOPullDown:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:731    .text.HAL_PWREx_EnableGPIOPullDown:00000000 HAL_PWREx_EnableGPIOPullDown
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:747    .text.HAL_PWREx_EnableGPIOPullDown:00000008 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:898    .text.HAL_PWREx_EnableGPIOPullDown:000000b8 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:903    .text.HAL_PWREx_DisableGPIOPullDown:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:909    .text.HAL_PWREx_DisableGPIOPullDown:00000000 HAL_PWREx_DisableGPIOPullDown
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:925    .text.HAL_PWREx_DisableGPIOPullDown:00000008 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1044   .text.HAL_PWREx_DisableGPIOPullDown:00000084 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1049   .text.HAL_PWREx_EnablePullUpPullDownConfig:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1055   .text.HAL_PWREx_EnablePullUpPullDownConfig:00000000 HAL_PWREx_EnablePullUpPullDownConfig
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1072   .text.HAL_PWREx_EnablePullUpPullDownConfig:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1077   .text.HAL_PWREx_DisablePullUpPullDownConfig:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1083   .text.HAL_PWREx_DisablePullUpPullDownConfig:00000000 HAL_PWREx_DisablePullUpPullDownConfig
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1100   .text.HAL_PWREx_DisablePullUpPullDownConfig:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1105   .text.HAL_PWREx_EnableSRAM2ContentRetention:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1111   .text.HAL_PWREx_EnableSRAM2ContentRetention:00000000 HAL_PWREx_EnableSRAM2ContentRetention
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1128   .text.HAL_PWREx_EnableSRAM2ContentRetention:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1133   .text.HAL_PWREx_DisableSRAM2ContentRetention:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1139   .text.HAL_PWREx_DisableSRAM2ContentRetention:00000000 HAL_PWREx_DisableSRAM2ContentRetention
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1156   .text.HAL_PWREx_DisableSRAM2ContentRetention:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1161   .text.HAL_PWREx_EnablePVM1:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1167   .text.HAL_PWREx_EnablePVM1:00000000 HAL_PWREx_EnablePVM1
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1184   .text.HAL_PWREx_EnablePVM1:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1189   .text.HAL_PWREx_DisablePVM1:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1195   .text.HAL_PWREx_DisablePVM1:00000000 HAL_PWREx_DisablePVM1
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1212   .text.HAL_PWREx_DisablePVM1:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1217   .text.HAL_PWREx_EnablePVM2:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1223   .text.HAL_PWREx_EnablePVM2:00000000 HAL_PWREx_EnablePVM2
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1240   .text.HAL_PWREx_EnablePVM2:0000000c $d
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 66
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:21     .text.HAL_PWREx_GetVoltageRange:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:27     .text.HAL_PWREx_GetVoltageRange:00000000 HAL_PWREx_GetVoltageRange
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:58     .text.HAL_PWREx_GetVoltageRange:00000020 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:63     .text.HAL_PWREx_ControlVoltageScaling:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:69     .text.HAL_PWREx_ControlVoltageScaling:00000000 HAL_PWREx_ControlVoltageScaling
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:273    .text.HAL_PWREx_ControlVoltageScaling:00000100 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:280    .text.HAL_PWREx_EnableBatteryCharging:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:286    .text.HAL_PWREx_EnableBatteryCharging:00000000 HAL_PWREx_EnableBatteryCharging
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:310    .text.HAL_PWREx_EnableBatteryCharging:00000018 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:315    .text.HAL_PWREx_DisableBatteryCharging:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:321    .text.HAL_PWREx_DisableBatteryCharging:00000000 HAL_PWREx_DisableBatteryCharging
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:338    .text.HAL_PWREx_DisableBatteryCharging:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:343    .text.HAL_PWREx_EnableInternalWakeUpLine:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:349    .text.HAL_PWREx_EnableInternalWakeUpLine:00000000 HAL_PWREx_EnableInternalWakeUpLine
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:366    .text.HAL_PWREx_EnableInternalWakeUpLine:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:371    .text.HAL_PWREx_DisableInternalWakeUpLine:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:377    .text.HAL_PWREx_DisableInternalWakeUpLine:00000000 HAL_PWREx_DisableInternalWakeUpLine
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:394    .text.HAL_PWREx_DisableInternalWakeUpLine:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:399    .text.HAL_PWREx_EnableGPIOPullUp:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:405    .text.HAL_PWREx_EnableGPIOPullUp:00000000 HAL_PWREx_EnableGPIOPullUp
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:421    .text.HAL_PWREx_EnableGPIOPullUp:00000008 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:573    .text.HAL_PWREx_EnableGPIOPullUp:000000b4 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:578    .text.HAL_PWREx_DisableGPIOPullUp:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:584    .text.HAL_PWREx_DisableGPIOPullUp:00000000 HAL_PWREx_DisableGPIOPullUp
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:600    .text.HAL_PWREx_DisableGPIOPullUp:00000008 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:720    .text.HAL_PWREx_DisableGPIOPullUp:00000088 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:725    .text.HAL_PWREx_EnableGPIOPullDown:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:731    .text.HAL_PWREx_EnableGPIOPullDown:00000000 HAL_PWREx_EnableGPIOPullDown
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:747    .text.HAL_PWREx_EnableGPIOPullDown:00000008 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:898    .text.HAL_PWREx_EnableGPIOPullDown:000000b8 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:903    .text.HAL_PWREx_DisableGPIOPullDown:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:909    .text.HAL_PWREx_DisableGPIOPullDown:00000000 HAL_PWREx_DisableGPIOPullDown
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:925    .text.HAL_PWREx_DisableGPIOPullDown:00000008 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1044   .text.HAL_PWREx_DisableGPIOPullDown:00000084 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1049   .text.HAL_PWREx_EnablePullUpPullDownConfig:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1055   .text.HAL_PWREx_EnablePullUpPullDownConfig:00000000 HAL_PWREx_EnablePullUpPullDownConfig
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1072   .text.HAL_PWREx_EnablePullUpPullDownConfig:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1077   .text.HAL_PWREx_DisablePullUpPullDownConfig:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1083   .text.HAL_PWREx_DisablePullUpPullDownConfig:00000000 HAL_PWREx_DisablePullUpPullDownConfig
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1100   .text.HAL_PWREx_DisablePullUpPullDownConfig:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1105   .text.HAL_PWREx_EnableSRAM2ContentRetention:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1111   .text.HAL_PWREx_EnableSRAM2ContentRetention:00000000 HAL_PWREx_EnableSRAM2ContentRetention
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1128   .text.HAL_PWREx_EnableSRAM2ContentRetention:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1133   .text.HAL_PWREx_DisableSRAM2ContentRetention:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1139   .text.HAL_PWREx_DisableSRAM2ContentRetention:00000000 HAL_PWREx_DisableSRAM2ContentRetention
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1156   .text.HAL_PWREx_DisableSRAM2ContentRetention:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1161   .text.HAL_PWREx_EnablePVM1:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1167   .text.HAL_PWREx_EnablePVM1:00000000 HAL_PWREx_EnablePVM1
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1184   .text.HAL_PWREx_EnablePVM1:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1189   .text.HAL_PWREx_DisablePVM1:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1195   .text.HAL_PWREx_DisablePVM1:00000000 HAL_PWREx_DisablePVM1
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1212   .text.HAL_PWREx_DisablePVM1:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1217   .text.HAL_PWREx_EnablePVM2:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1223   .text.HAL_PWREx_EnablePVM2:00000000 HAL_PWREx_EnablePVM2
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1240   .text.HAL_PWREx_EnablePVM2:0000000c $d
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 66
 
 
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1245   .text.HAL_PWREx_DisablePVM2:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1251   .text.HAL_PWREx_DisablePVM2:00000000 HAL_PWREx_DisablePVM2
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1268   .text.HAL_PWREx_DisablePVM2:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1273   .text.HAL_PWREx_EnablePVM3:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1279   .text.HAL_PWREx_EnablePVM3:00000000 HAL_PWREx_EnablePVM3
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1296   .text.HAL_PWREx_EnablePVM3:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1301   .text.HAL_PWREx_DisablePVM3:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1307   .text.HAL_PWREx_DisablePVM3:00000000 HAL_PWREx_DisablePVM3
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1324   .text.HAL_PWREx_DisablePVM3:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1329   .text.HAL_PWREx_EnablePVM4:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1335   .text.HAL_PWREx_EnablePVM4:00000000 HAL_PWREx_EnablePVM4
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1352   .text.HAL_PWREx_EnablePVM4:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1357   .text.HAL_PWREx_DisablePVM4:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1363   .text.HAL_PWREx_DisablePVM4:00000000 HAL_PWREx_DisablePVM4
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1380   .text.HAL_PWREx_DisablePVM4:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1385   .text.HAL_PWREx_ConfigPVM:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1391   .text.HAL_PWREx_ConfigPVM:00000000 HAL_PWREx_ConfigPVM
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1744   .text.HAL_PWREx_ConfigPVM:000001e8 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1749   .text.HAL_PWREx_EnableLowPowerRunMode:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1755   .text.HAL_PWREx_EnableLowPowerRunMode:00000000 HAL_PWREx_EnableLowPowerRunMode
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1772   .text.HAL_PWREx_EnableLowPowerRunMode:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1777   .text.HAL_PWREx_DisableLowPowerRunMode:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1783   .text.HAL_PWREx_DisableLowPowerRunMode:00000000 HAL_PWREx_DisableLowPowerRunMode
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1849   .text.HAL_PWREx_DisableLowPowerRunMode:0000004c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1855   .text.HAL_PWREx_EnterSTOP0Mode:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1861   .text.HAL_PWREx_EnterSTOP0Mode:00000000 HAL_PWREx_EnterSTOP0Mode
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1919   .text.HAL_PWREx_EnterSTOP0Mode:00000030 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1925   .text.HAL_PWREx_EnterSTOP1Mode:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1931   .text.HAL_PWREx_EnterSTOP1Mode:00000000 HAL_PWREx_EnterSTOP1Mode
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1990   .text.HAL_PWREx_EnterSTOP1Mode:00000034 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:1996   .text.HAL_PWREx_EnterSHUTDOWNMode:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2002   .text.HAL_PWREx_EnterSHUTDOWNMode:00000000 HAL_PWREx_EnterSHUTDOWNMode
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2032   .text.HAL_PWREx_EnterSHUTDOWNMode:0000001c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2038   .text.HAL_PWREx_PVM1Callback:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2044   .text.HAL_PWREx_PVM1Callback:00000000 HAL_PWREx_PVM1Callback
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2057   .text.HAL_PWREx_PVM2Callback:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2063   .text.HAL_PWREx_PVM2Callback:00000000 HAL_PWREx_PVM2Callback
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2076   .text.HAL_PWREx_PVM3Callback:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2082   .text.HAL_PWREx_PVM3Callback:00000000 HAL_PWREx_PVM3Callback
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2095   .text.HAL_PWREx_PVM4Callback:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2101   .text.HAL_PWREx_PVM4Callback:00000000 HAL_PWREx_PVM4Callback
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2114   .text.HAL_PWREx_PVD_PVM_IRQHandler:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2120   .text.HAL_PWREx_PVD_PVM_IRQHandler:00000000 HAL_PWREx_PVD_PVM_IRQHandler
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2222   .text.HAL_PWREx_PVD_PVM_IRQHandler:00000074 $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2227   .text.HAL_PWREx_EnableUCPDStandbyMode:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2233   .text.HAL_PWREx_EnableUCPDStandbyMode:00000000 HAL_PWREx_EnableUCPDStandbyMode
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2250   .text.HAL_PWREx_EnableUCPDStandbyMode:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2255   .text.HAL_PWREx_DisableUCPDStandbyMode:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2261   .text.HAL_PWREx_DisableUCPDStandbyMode:00000000 HAL_PWREx_DisableUCPDStandbyMode
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2278   .text.HAL_PWREx_DisableUCPDStandbyMode:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2283   .text.HAL_PWREx_EnableUCPDDeadBattery:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2289   .text.HAL_PWREx_EnableUCPDDeadBattery:00000000 HAL_PWREx_EnableUCPDDeadBattery
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2306   .text.HAL_PWREx_EnableUCPDDeadBattery:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2311   .text.HAL_PWREx_DisableUCPDDeadBattery:00000000 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2317   .text.HAL_PWREx_DisableUCPDDeadBattery:00000000 HAL_PWREx_DisableUCPDDeadBattery
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:2334   .text.HAL_PWREx_DisableUCPDDeadBattery:0000000c $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:428    .text.HAL_PWREx_EnableGPIOPullUp:0000000f $d
-ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s 			page 67
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1245   .text.HAL_PWREx_DisablePVM2:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1251   .text.HAL_PWREx_DisablePVM2:00000000 HAL_PWREx_DisablePVM2
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1268   .text.HAL_PWREx_DisablePVM2:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1273   .text.HAL_PWREx_EnablePVM3:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1279   .text.HAL_PWREx_EnablePVM3:00000000 HAL_PWREx_EnablePVM3
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1296   .text.HAL_PWREx_EnablePVM3:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1301   .text.HAL_PWREx_DisablePVM3:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1307   .text.HAL_PWREx_DisablePVM3:00000000 HAL_PWREx_DisablePVM3
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1324   .text.HAL_PWREx_DisablePVM3:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1329   .text.HAL_PWREx_EnablePVM4:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1335   .text.HAL_PWREx_EnablePVM4:00000000 HAL_PWREx_EnablePVM4
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1352   .text.HAL_PWREx_EnablePVM4:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1357   .text.HAL_PWREx_DisablePVM4:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1363   .text.HAL_PWREx_DisablePVM4:00000000 HAL_PWREx_DisablePVM4
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1380   .text.HAL_PWREx_DisablePVM4:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1385   .text.HAL_PWREx_ConfigPVM:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1391   .text.HAL_PWREx_ConfigPVM:00000000 HAL_PWREx_ConfigPVM
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1744   .text.HAL_PWREx_ConfigPVM:000001e8 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1749   .text.HAL_PWREx_EnableLowPowerRunMode:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1755   .text.HAL_PWREx_EnableLowPowerRunMode:00000000 HAL_PWREx_EnableLowPowerRunMode
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1772   .text.HAL_PWREx_EnableLowPowerRunMode:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1777   .text.HAL_PWREx_DisableLowPowerRunMode:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1783   .text.HAL_PWREx_DisableLowPowerRunMode:00000000 HAL_PWREx_DisableLowPowerRunMode
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1849   .text.HAL_PWREx_DisableLowPowerRunMode:0000004c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1855   .text.HAL_PWREx_EnterSTOP0Mode:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1861   .text.HAL_PWREx_EnterSTOP0Mode:00000000 HAL_PWREx_EnterSTOP0Mode
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1919   .text.HAL_PWREx_EnterSTOP0Mode:00000030 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1925   .text.HAL_PWREx_EnterSTOP1Mode:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1931   .text.HAL_PWREx_EnterSTOP1Mode:00000000 HAL_PWREx_EnterSTOP1Mode
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1990   .text.HAL_PWREx_EnterSTOP1Mode:00000034 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:1996   .text.HAL_PWREx_EnterSHUTDOWNMode:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2002   .text.HAL_PWREx_EnterSHUTDOWNMode:00000000 HAL_PWREx_EnterSHUTDOWNMode
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2032   .text.HAL_PWREx_EnterSHUTDOWNMode:0000001c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2038   .text.HAL_PWREx_PVM1Callback:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2044   .text.HAL_PWREx_PVM1Callback:00000000 HAL_PWREx_PVM1Callback
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2057   .text.HAL_PWREx_PVM2Callback:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2063   .text.HAL_PWREx_PVM2Callback:00000000 HAL_PWREx_PVM2Callback
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2076   .text.HAL_PWREx_PVM3Callback:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2082   .text.HAL_PWREx_PVM3Callback:00000000 HAL_PWREx_PVM3Callback
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2095   .text.HAL_PWREx_PVM4Callback:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2101   .text.HAL_PWREx_PVM4Callback:00000000 HAL_PWREx_PVM4Callback
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2114   .text.HAL_PWREx_PVD_PVM_IRQHandler:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2120   .text.HAL_PWREx_PVD_PVM_IRQHandler:00000000 HAL_PWREx_PVD_PVM_IRQHandler
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2222   .text.HAL_PWREx_PVD_PVM_IRQHandler:00000074 $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2227   .text.HAL_PWREx_EnableUCPDStandbyMode:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2233   .text.HAL_PWREx_EnableUCPDStandbyMode:00000000 HAL_PWREx_EnableUCPDStandbyMode
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2250   .text.HAL_PWREx_EnableUCPDStandbyMode:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2255   .text.HAL_PWREx_DisableUCPDStandbyMode:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2261   .text.HAL_PWREx_DisableUCPDStandbyMode:00000000 HAL_PWREx_DisableUCPDStandbyMode
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2278   .text.HAL_PWREx_DisableUCPDStandbyMode:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2283   .text.HAL_PWREx_EnableUCPDDeadBattery:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2289   .text.HAL_PWREx_EnableUCPDDeadBattery:00000000 HAL_PWREx_EnableUCPDDeadBattery
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2306   .text.HAL_PWREx_EnableUCPDDeadBattery:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2311   .text.HAL_PWREx_DisableUCPDDeadBattery:00000000 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2317   .text.HAL_PWREx_DisableUCPDDeadBattery:00000000 HAL_PWREx_DisableUCPDDeadBattery
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:2334   .text.HAL_PWREx_DisableUCPDDeadBattery:0000000c $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:428    .text.HAL_PWREx_EnableGPIOPullUp:0000000f $d
+ARM GAS  C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s 			page 67
 
 
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:428    .text.HAL_PWREx_EnableGPIOPullUp:00000010 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:607    .text.HAL_PWREx_DisableGPIOPullUp:0000000f $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:607    .text.HAL_PWREx_DisableGPIOPullUp:00000010 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:754    .text.HAL_PWREx_EnableGPIOPullDown:0000000f $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:754    .text.HAL_PWREx_EnableGPIOPullDown:00000010 $t
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:932    .text.HAL_PWREx_DisableGPIOPullDown:0000000f $d
-C:\Users\Booster\AppData\Local\Temp\cc7hsJFk.s:932    .text.HAL_PWREx_DisableGPIOPullDown:00000010 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:428    .text.HAL_PWREx_EnableGPIOPullUp:00000010 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:607    .text.HAL_PWREx_DisableGPIOPullUp:0000000f $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:607    .text.HAL_PWREx_DisableGPIOPullUp:00000010 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:754    .text.HAL_PWREx_EnableGPIOPullDown:0000000f $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:754    .text.HAL_PWREx_EnableGPIOPullDown:00000010 $t
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:932    .text.HAL_PWREx_DisableGPIOPullDown:0000000f $d
+C:\Users\Booster\AppData\Local\Temp\cc7Z6nGn.s:932    .text.HAL_PWREx_DisableGPIOPullDown:00000010 $t
 
 UNDEFINED SYMBOLS
 SystemCoreClock

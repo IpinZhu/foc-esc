@@ -26,8 +26,6 @@ build/svpwm.o: Core/Src/svpwm.c Core/Inc/svpwm.h Core/Inc/main.h \
  Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_flash_ramfunc.h \
  Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr.h \
  Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h \
- Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_spi.h \
- Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_spi_ex.h \
  Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h \
  Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h \
  Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart.h \
@@ -36,7 +34,7 @@ build/svpwm.o: Core/Src/svpwm.c Core/Inc/svpwm.h Core/Inc/main.h \
  Drivers/CMSIS/DSP/Include/arm_math.h \
  Drivers/CMSIS/Include/cmsis_compiler.h \
  Drivers/CMSIS/DSP/Include/arm_common_tables.h \
- Drivers/CMSIS/DSP/Include/arm_math.h Core/Inc/tim.h
+ Drivers/CMSIS/DSP/Include/arm_math.h Core/Inc/constant.h Core/Inc/tim.h
 Core/Inc/svpwm.h:
 Core/Inc/main.h:
 Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal.h:
@@ -68,8 +66,6 @@ Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_flash_ex.h:
 Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_flash_ramfunc.h:
 Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr.h:
 Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h:
-Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_spi.h:
-Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_spi_ex.h:
 Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h:
 Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h:
 Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart.h:
@@ -79,4 +75,5 @@ Drivers/CMSIS/DSP/Include/arm_math.h:
 Drivers/CMSIS/Include/cmsis_compiler.h:
 Drivers/CMSIS/DSP/Include/arm_common_tables.h:
 Drivers/CMSIS/DSP/Include/arm_math.h:
+Core/Inc/constant.h:
 Core/Inc/tim.h:

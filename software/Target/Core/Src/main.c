@@ -21,7 +21,6 @@
 #include "adc.h"
 #include "dma.h"
 #include "fdcan.h"
-#include "spi.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -95,16 +94,10 @@ int main(void)
   MX_ADC1_Init();
   MX_USART1_UART_Init();
   MX_FDCAN1_Init();
-  MX_SPI1_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Transmit(&huart1, "HELLO\n", 10, 100);
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_SET);
+  Openloop_Init();
 
   /* USER CODE END 2 */
 
@@ -115,15 +108,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
-    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
-    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
-
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_15);
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13);
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14);
-
-    HAL_Delay(1);
+    Openloop_Step();
+    
   }
   /* USER CODE END 3 */
 }

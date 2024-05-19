@@ -11,6 +11,9 @@
 
 #include "svpwm.h"
 
+float32_t Zeta;
+Volt_Comp Start_Vol;
+
 /// @brief 七段式Svpwm生成函数
 /// @param ualpha 期望alpha电压
 /// @param ubeta 期望beta电压
@@ -19,7 +22,7 @@ void Svpwm(float32_t ualpha, float32_t ubeta, float32_t Udc)
 {
     float32_t WX, WY, WZ, WW;
     uint16_t Tx, Ty, T0;
-    uint16_t chan1, chan2, chan3; // 定时器上占空比
+    uint16_t chan1 = 0, chan2 = 0, chan3 = 0; // 定时器上占空比
 
     // 时间计算
     WW = (SQRT3 * TS) / Udc;
@@ -190,4 +193,99 @@ int32_t Sqrt(int32_t wInput)
     }
 
     return (wtemprootnew);
+}
+
+/// @brief clarke trans function
+/// @param current
+/// @return Ialpha and Ibeta
+Curr_Comp Clarke(Curr_Samp current)
+{
+    Curr_Comp Ret;
+    float32_t Ibdiv2;
+    float32_t Icdiv2;
+
+    Ibdiv2 = current.Ib / 2;
+    Icdiv2 = current.Ic / 2;
+
+    Ret.sI1 = current.Ia - Ibdiv2 - Icdiv2;
+    Ret.sI2 = Ibdiv2 * SQRT3 - Icdiv2 * SQRT3;
+
+    return Ret;
+}
+
+/// @brief Park tarans function
+/// @param transcurrent
+/// @return Id and Iq
+Curr_Comp Park(Curr_Comp transcurrent, Trig_Comp zeta)
+{
+    Curr_Comp Ret;
+
+    Ret.sI1 = zeta.hCos * transcurrent.sI1 + zeta.hSin * transcurrent.sI2;
+    Ret.sI2 = zeta.hCos * transcurrent.sI2 - zeta.hSin * transcurrent.sI1;
+
+    return Ret;
+}
+
+/// @brief
+/// @param zeta
+/// @return return sin(zeta) and cos(zeta)
+Trig_Comp SinCosZeta(float32_t zeta)
+{
+    Trig_Comp Ret;
+    float32_t zetaRad;
+    zetaRad = ((zeta * 6.28) / 360);
+
+    Ret.hCos = arm_cos_f32(zetaRad);
+    Ret.hSin = arm_sin_f32(zetaRad);
+
+    return Ret;
+}
+
+/// @brief RePark trans function
+/// @param uduq
+/// @return ualpha and ubeta
+Volt_Comp Inv_Park(Volt_Comp uduq, Trig_Comp zeta)
+{
+    Volt_Comp Ret;
+
+    Ret.sV1 = zeta.hCos * uduq.sV1 - zeta.hSin * uduq.sV2;
+    Ret.sV2 = zeta.hSin + uduq.sV1 + zeta.hCos * uduq.sV2;
+
+    return Ret;
+}
+
+/// @brief
+void Openloop_Init()
+{
+
+    Zeta = 0;
+    Start_Vol.sV1 = 0;
+    Start_Vol.sV2 = 5;
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
+
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 1000);
+}
+
+/// @brief
+void Openloop_Step()
+{
+    Trig_Comp p;
+    Volt_Comp n;
+    Zeta += 10;
+    if (Zeta >= 360)
+    {
+        Zeta = 0;
+    }
+    p = SinCosZeta(Zeta);
+    n = Inv_Park(Start_Vol, p);
+
+    Svpwm(n.sV1, n.sV2, 10);
+    HAL_Delay(10);
 }
