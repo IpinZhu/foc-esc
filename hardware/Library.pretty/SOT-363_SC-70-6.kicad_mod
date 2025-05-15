@@ -1,0 +1,229 @@
+(footprint "SOT-363_SC-70-6"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "SOT-363, SC-70-6")
+	(tags "SOT-363 SC-70-6")
+	(property "Reference" "REF**"
+		(at 0 -2 180)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "3a256986-c767-49c7-8ad6-d2dc3ecb83cb")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "INA199xxDCK"
+		(at 0 2 180)
+		(layer "F.Fab")
+		(uuid "cc05afae-0e72-43bc-8c58-dcc675fb6319")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" "http://www.ti.com/lit/ds/symlink/ina199.pdf"
+		(at 0 0 180)
+		(unlocked yes)
+		(layer "B.Fab")
+		(hide yes)
+		(uuid "5ac1a553-5b83-45d8-8fe1-687926ba72a4")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+			(justify mirror)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 180)
+		(unlocked yes)
+		(layer "B.Fab")
+		(hide yes)
+		(uuid "3292b2f2-b260-47fe-865b-e84de64606cb")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+			(justify mirror)
+		)
+	)
+	(attr smd)
+	(fp_line
+		(start -0.7 1.16)
+		(end 0.7 1.16)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "3e8979e0-e8f7-4649-840f-bf2c97f1d884")
+	)
+	(fp_line
+		(start 0.7 -1.16)
+		(end -1.2 -1.16)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "ca48ecb9-4acb-4b89-b945-db7cfa1fd2c3")
+	)
+	(fp_line
+		(start -1.6 -1.4)
+		(end -1.6 1.4)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "27e2f996-5c0b-4efa-a5e4-890d1c1f5aee")
+	)
+	(fp_line
+		(start -1.6 -1.4)
+		(end 1.6 -1.4)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "7bf71b28-8e7c-4279-be9a-11f0f3ae984e")
+	)
+	(fp_line
+		(start -1.6 1.4)
+		(end 1.6 1.4)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "9e0b0b9b-a55c-4fcd-903e-6de7af677376")
+	)
+	(fp_line
+		(start 1.6 1.4)
+		(end 1.6 -1.4)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "497280d2-17a4-4b35-942e-a612bb3f923e")
+	)
+	(fp_line
+		(start -0.675 -0.6)
+		(end -0.675 1.1)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "68c6bfb9-f4ec-43a7-b5d4-66d036d954c6")
+	)
+	(fp_line
+		(start -0.175 -1.1)
+		(end -0.675 -0.6)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "4d7e4468-787b-4102-a237-06fdf42b15cf")
+	)
+	(fp_line
+		(start 0.675 -1.1)
+		(end -0.175 -1.1)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "48dfd278-2c93-4993-b251-8443ea8b2eaa")
+	)
+	(fp_line
+		(start 0.675 -1.1)
+		(end 0.675 1.1)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "d4a87805-f19e-4f0a-b7a0-066e4071650c")
+	)
+	(fp_line
+		(start 0.675 1.1)
+		(end -0.675 1.1)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "718f10c6-9647-4723-8bab-5a09e99c51af")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 90)
+		(layer "F.Fab")
+		(uuid "a1dc9fce-0f53-40a7-9c60-fbaf32e250c1")
+		(effects
+			(font
+				(size 0.5 0.5)
+				(thickness 0.075)
+			)
+		)
+	)
+	(pad "1" smd rect
+		(at -0.95 -0.65)
+		(size 0.65 0.4)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "8db7388a-7668-4022-a035-f96438b69035")
+	)
+	(pad "2" smd rect
+		(at -0.95 0)
+		(size 0.65 0.4)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "2f1e0528-8c67-460f-8e66-64187c639802")
+	)
+	(pad "3" smd rect
+		(at -0.95 0.65)
+		(size 0.65 0.4)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "e497d6ce-48c7-4ce7-93e0-0e616010aa63")
+	)
+	(pad "4" smd rect
+		(at 0.95 0.65)
+		(size 0.65 0.4)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "6075f04b-b954-40e9-9f90-73157a68484a")
+	)
+	(pad "5" smd rect
+		(at 0.95 0)
+		(size 0.65 0.4)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "55706a0b-84d5-4572-bfaf-8fd49e8441ca")
+	)
+	(pad "6" smd rect
+		(at 0.95 -0.65)
+		(size 0.65 0.4)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "feadeb09-6473-4524-9e12-4c7ad779dcb8")
+	)
+	(embedded_fonts no)
+	(model "${KICAD6_3DMODEL_DIR}/Package_TO_SOT_SMD.3dshapes/SOT-363_SC-70-6.wrl"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)
