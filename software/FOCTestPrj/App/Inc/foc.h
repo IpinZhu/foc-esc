@@ -2,9 +2,9 @@
 
 #include "foc_driver.h"
 #include "foc_utils.h"
+#include "pid.h"
 #include "sensor.h"
 #include "ustringart.h"
-#include "pid.h"
 #include <array>
 #include <vector>
 
@@ -53,12 +53,13 @@ public:
 private:
   FOCDriver *m_driver;
   FOCSensor *m_sensor;
-  StringUart m_debugger;
 
-  PIDController current_PID,velocity_PID;
+  PIDController current_PID, velocity_PID;
 
   u8 pole_pairs;
-  float resistance; // ohm
+  float phase_resistance; // ohm
+  float kv_rating;
+  float inductance;
 
   float Ua, Ub, Uc;
 
@@ -71,6 +72,4 @@ private:
   float velocityOpenloop(float target_velocity);
 
   float angleOpenloop(float target_angle);
-
-  
 };

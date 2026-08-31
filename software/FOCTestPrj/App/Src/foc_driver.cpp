@@ -10,7 +10,11 @@
  */
 
 #include "foc_driver.h"
-#include <sys/_intsup.h>
+#include "foc.h"
+
+FOCMotor::FOCMotor(int pp, float R, float KV, float L)
+    : current_PID(0, 0, 0, 0, 0), velocity_PID(0, 0, 0, 0, 0), pole_pairs(pp),
+      phase_resistance(R), kv_rating(KV), inductance(L) {}
 
 extern "C" {
 
