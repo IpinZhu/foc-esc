@@ -1,7 +1,18 @@
-*.kicad_prl
-fp-info-cache
-\#auto_saved_files\#
-FOC2-backups
-_autosave-*
-bom
-gerber
+*
+
+# necessary
+!*/
+!.gitignore
+!.gitattributes
+
+# project
+!*.kicad_pro
+!*.kicad_pcb
+!*.kicad_sch
+
+# library
+!*.kicad_sym
+!*.kicad_mod
+
+# README
+!README.md
