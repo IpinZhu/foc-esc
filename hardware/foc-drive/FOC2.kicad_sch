@@ -14157,7 +14157,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 360.426 57.15 90)
 			(effects
 				(font
@@ -15437,7 +15437,7 @@
 				)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 177.165 142.875 90)
 			(effects
 				(font
@@ -16196,7 +16196,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 360.426 52.324 90)
 			(effects
 				(font
@@ -17480,7 +17480,7 @@
 				)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 137.16 165.1 90)
 			(effects
 				(font
@@ -19635,7 +19635,7 @@
 				)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 213.995 142.875 90)
 			(effects
 				(font
@@ -22082,7 +22082,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 313.436 82.55 90)
 			(effects
 				(font
@@ -22889,7 +22889,7 @@
 				)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 153.543 213.106 90)
 			(effects
 				(font
@@ -23240,7 +23240,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 313.436 85.09 90)
 			(effects
 				(font
@@ -23375,7 +23375,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 360.426 108.204 90)
 			(effects
 				(font
@@ -24197,7 +24197,7 @@
 				)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 177.165 165.1 90)
 			(effects
 				(font
@@ -24902,7 +24902,7 @@
 				)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 137.16 142.875 90)
 			(effects
 				(font
@@ -25108,7 +25108,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 313.436 80.264 90)
 			(effects
 				(font
@@ -26342,7 +26342,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 360.426 54.61 90)
 			(effects
 				(font
@@ -26411,7 +26411,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 360.426 113.03 90)
 			(effects
 				(font
@@ -28314,7 +28314,7 @@
 				)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 153.289 205.486 90)
 			(effects
 				(font
@@ -28461,7 +28461,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 360.426 110.49 90)
 			(effects
 				(font
@@ -29382,7 +29382,7 @@
 				)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "10"
 			(at 213.995 165.1 90)
 			(effects
 				(font

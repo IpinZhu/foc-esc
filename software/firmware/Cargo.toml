@@ -1,0 +1,46 @@
+[package]
+name = "foc-firmware"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2024"
+
+[features]
+default = ["sensor-encoder"]
+sensor-encoder = []
+sensor-hall = []
+
+[target.'cfg(target_arch = "arm")'.dependencies]
+cortex-m = { version = "0.7.6", features = ["inline-asm", "critical-section-single-core"] }
+cortex-m-rt = "0.7.0"
+embassy-executor = { git = "https://github.com/embassy-rs/embassy", features = ["platform-cortex-m", "executor-thread", "defmt"] }
+embassy-time = { git = "https://github.com/embassy-rs/embassy", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
+embassy-sync = { git = "https://github.com/embassy-rs/embassy", features = ["defmt"] }
+embassy-futures = { git = "https://github.com/embassy-rs/embassy" }
+embedded-hal = "0.2.7"
+embedded-io-async = { version = "0.7.0", features = ["defmt"] }
+static_cell = "2"
+heapless = "0.8"
+embassy-stm32 = { git = "https://github.com/embassy-rs/embassy", features = [
+    "defmt",
+    "stm32g473rc",
+    "time-driver-any",
+    "exti",
+    "memory-x",
+    "single-bank",
+    "unstable-pac",
+] }
+defmt = "1.0.1"
+defmt-rtt = "1.0.0"
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+
+[profile.release]
+debug = 2
+lto = true
+opt-level = 3
+codegen-units = 1
+
+[[bin]]
+name = "foc-firmware"
+path = "src/main.rs"
+test = false
+bench = false

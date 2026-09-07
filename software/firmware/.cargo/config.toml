@@ -1,0 +1,16 @@
+# 告诉 cargo 运行 `cargo run` 时，调用 probe-rs 去烧录
+# ⚠️ 请确认这里的芯片型号是 probe-rs 能够识别的格式（可以用 probe-rs chip list | grep -i STM32G473RC 查）
+[target.thumbv7em-none-eabihf]
+runner = "probe-rs run --chip STM32G473RC"
+rustflags = [
+  "-C", "link-arg=-Tlink.x",
+  "-C", "link-arg=-Tdefmt.x",
+]
+
+[build]
+# 指定默认编译目标为 Cortex-M4F 架构 (STM32F4系列)
+target = "thumbv7em-none-eabihf"
+
+[env]
+# 启用 defmt 日志的详细打印
+DEFMT_LOG = "trace"

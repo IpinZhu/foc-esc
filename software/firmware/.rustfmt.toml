@@ -1,0 +1,7 @@
+max_width = 80
+match_arm_leading_pipes = "Always"
+match_block_trailing_comma = true
+newline_style = "Unix"
+reorder_imports = true
+tabsize = 4
+

@@ -1,0 +1,7 @@
+# Rust 构建产物
+/target
+
+# probe-rs / 烧录产物
+*.elf
+*.bin
+*.hex
