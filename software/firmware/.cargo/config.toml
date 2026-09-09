@@ -8,7 +8,7 @@ rustflags = [
 ]
 
 [build]
-# 指定默认编译目标为 Cortex-M4F 架构 (STM32F4系列)
+# 指定默认编译目标为 Cortex-M4F 架构（STM32G4 系列）
 target = "thumbv7em-none-eabihf"
 
 [env]

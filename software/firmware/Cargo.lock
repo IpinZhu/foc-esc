@@ -350,7 +350,7 @@ dependencies = [
  "embedded-storage",
  "embedded-storage-async",
  "futures-util",
- "heapless 0.9.3",
+ "heapless",
  "nb 1.1.0",
  "once_cell",
  "proc-macro2",
@@ -380,7 +380,7 @@ dependencies = [
  "embedded-io-async 0.7.0",
  "futures-core",
  "futures-sink",
- "heapless 0.9.3",
+ "heapless",
 ]
 
 [[package]]
@@ -413,7 +413,7 @@ version = "0.3.2"
 source = "git+https://github.com/embassy-rs/embassy#e5921a9d3a4a138f724ea40662599ff0fc42e6c7"
 dependencies = [
  "embassy-executor-timer-queue",
- "heapless 0.9.3",
+ "heapless",
 ]
 
 [[package]]
@@ -557,9 +557,7 @@ dependencies = [
  "embassy-stm32",
  "embassy-sync",
  "embassy-time",
- "embedded-hal 0.2.7",
- "embedded-io-async 0.7.0",
- "heapless 0.8.0",
+ "embedded-can",
  "panic-probe",
  "static_cell",
 ]
@@ -615,16 +613,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47d60b12902ba28e2730cd37e95b8c9223af2808df9e902d4df49588d1470606"
 dependencies = [
  "byteorder",
-]
-
-[[package]]
-name = "heapless"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bfb9eb618601c89945a70e254898da93b13be0388091d42117462b265bb3fad"
-dependencies = [
- "hash32",
- "stable_deref_trait",
 ]
 
 [[package]]

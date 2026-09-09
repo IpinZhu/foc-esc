@@ -78,6 +78,10 @@ impl PidController {
         let integral_candidate =
             (self.integral + self.config.ki * error * dt).clamp(-limit, limit);
         let unsaturated = proportional + integral_candidate + derivative;
+        if !unsaturated.is_finite() {
+            self.reset();
+            return 0.0;
+        }
         let saturated = unsaturated.clamp(-limit, limit);
 
         if unsaturated == saturated
@@ -142,6 +146,18 @@ mod tests {
         assert!((output - 0.5).abs() < 1.0e-6);
     }
 
+    #[test]
+    fn non_finite_intermediate_resets_output() {
+        let mut pid = PidController::new(PidConfig::new(
+            f32::MAX,
+            0.0,
+            -f32::MAX,
+            100.0,
+            f32::INFINITY,
+        ));
+        assert_eq!(pid.update(1.0, 0.001), 100.0);
+        assert_eq!(pid.update(0.0, 0.001), 0.0);
+    }
     #[test]
     fn reset_clears_controller_history() {
         let mut pid = PidController::new(PidConfig::new(

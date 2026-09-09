@@ -101,7 +101,14 @@ pub fn svpwm(
     min_duty: f32,
     max_duty: f32,
 ) -> PhaseDuty {
-    if !bus_voltage.is_finite() || bus_voltage <= 0.0 || min_duty >= max_duty {
+    if !bus_voltage.is_finite()
+        || bus_voltage <= 0.0
+        || !voltage.alpha.is_finite()
+        || !voltage.beta.is_finite()
+        || !min_duty.is_finite()
+        || !max_duty.is_finite()
+        || min_duty >= max_duty
+    {
         return PhaseDuty::DISABLED;
     }
 
@@ -187,6 +194,19 @@ mod tests {
         );
     }
 
+    #[test]
+    fn svpwm_disables_non_finite_voltage() {
+        let duty = svpwm(
+            AlphaBeta {
+                alpha: f32::NAN,
+                beta: 0.0,
+            },
+            24.0,
+            0.05,
+            0.95,
+        );
+        assert_eq!(duty, PhaseDuty::DISABLED);
+    }
     #[test]
     fn svpwm_clamps_overmodulation() {
         let duty = svpwm(

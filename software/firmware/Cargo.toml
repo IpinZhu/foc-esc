@@ -16,10 +16,8 @@ embassy-executor = { git = "https://github.com/embassy-rs/embassy", features = [
 embassy-time = { git = "https://github.com/embassy-rs/embassy", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
 embassy-sync = { git = "https://github.com/embassy-rs/embassy", features = ["defmt"] }
 embassy-futures = { git = "https://github.com/embassy-rs/embassy" }
-embedded-hal = "0.2.7"
-embedded-io-async = { version = "0.7.0", features = ["defmt"] }
+embedded-can = "0.4"
 static_cell = "2"
-heapless = "0.8"
 embassy-stm32 = { git = "https://github.com/embassy-rs/embassy", features = [
     "defmt",
     "stm32g473rc",
@@ -32,6 +30,13 @@ embassy-stm32 = { git = "https://github.com/embassy-rs/embassy", features = [
 defmt = "1.0.1"
 defmt-rtt = "1.0.0"
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+
+[profile.dev]
+opt-level = "z"
+debug = 2
+lto = true
+codegen-units = 1
+incremental = false
 
 [profile.release]
 debug = 2

@@ -1,8 +1,9 @@
 use core::cell::RefCell;
 #[cfg(feature = "sensor-hall")]
 use core::f32::consts::FRAC_PI_3;
+#[cfg(feature = "sensor-encoder")]
 use core::f32::consts::TAU;
-use core::sync::atomic::{AtomicU32, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use embassy_stm32::adc::{
     Adc, AdcChannel as _, Exten, InjectedAdc, InjectedAdcTrigger, SampleTime,
@@ -24,6 +25,7 @@ use embassy_stm32::timer::input_capture::{CaptureInput, InputCapture};
 use embassy_stm32::timer::low_level::CountingMode;
 #[cfg(feature = "sensor-hall")]
 use embassy_stm32::timer::low_level::InputCaptureMode;
+#[cfg(feature = "sensor-encoder")]
 use embassy_stm32::timer::qei::{Config as QeiConfig, Qei};
 use embassy_stm32::timer::simple_pwm::PwmPin;
 use embassy_stm32::timer::{CaptureCompareInterruptHandler, Channel};
@@ -122,7 +124,12 @@ impl<'d> Tim1PwmBridge<'d> {
     }
 
     fn duty_ticks(&self, duty: f32) -> u32 {
-        (duty.clamp(0.0, 1.0) * self.max_duty as f32) as u32
+        let duty = if duty.is_finite() {
+            duty.clamp(0.0, 1.0)
+        } else {
+            0.5
+        };
+        (duty * self.max_duty as f32) as u32
     }
 }
 
@@ -150,18 +157,18 @@ impl PwmBridge for Tim1PwmBridge<'_> {
     }
 }
 
+struct AdcHandles {
+    adc1: InjectedAdc<'static, AdcRegisters>,
+    adc2: InjectedAdc<'static, AdcRegisters>,
+    adc3: InjectedAdc<'static, AdcRegisters>,
+}
+
 static ADC_FRAME_SIGNAL: Signal<CriticalSectionRawMutex, RawAdcFrame> =
     Signal::new();
 static ADC_SEQUENCE: AtomicU32 = AtomicU32::new(0);
-static ADC1_HANDLE: CriticalSectionMutex<
-    RefCell<Option<InjectedAdc<'static, AdcRegisters>>>,
-> = CriticalSectionMutex::new(RefCell::new(None));
-static ADC2_HANDLE: CriticalSectionMutex<
-    RefCell<Option<InjectedAdc<'static, AdcRegisters>>>,
-> = CriticalSectionMutex::new(RefCell::new(None));
-static ADC3_HANDLE: CriticalSectionMutex<
-    RefCell<Option<InjectedAdc<'static, AdcRegisters>>>,
-> = CriticalSectionMutex::new(RefCell::new(None));
+static ADC_FRAME_CONSUMED: AtomicBool = AtomicBool::new(false);
+static ADC_HANDLES: CriticalSectionMutex<RefCell<Option<AdcHandles>>> =
+    CriticalSectionMutex::new(RefCell::new(None));
 
 static PHASE_A_PIN: StaticCell<Peri<'static, peripherals::PA0>> =
     StaticCell::new();
@@ -173,16 +180,28 @@ static BUS_VOLTAGE_PIN: StaticCell<Peri<'static, peripherals::PA2>> =
     StaticCell::new();
 static NTC_PIN: StaticCell<Peri<'static, peripherals::PA3>> = StaticCell::new();
 
-pub fn init_injected_adcs(
-    adc1: Peri<'static, peripherals::ADC1>,
-    adc2: Peri<'static, peripherals::ADC2>,
-    adc3: Peri<'static, peripherals::ADC3>,
-    phase_a: Peri<'static, peripherals::PA0>,
-    phase_b: Peri<'static, peripherals::PA1>,
-    phase_c: Peri<'static, peripherals::PB0>,
-    bus_voltage: Peri<'static, peripherals::PA2>,
-    ntc: Peri<'static, peripherals::PA3>,
-) {
+pub struct InjectedAdcResources {
+    pub adc1: Peri<'static, peripherals::ADC1>,
+    pub adc2: Peri<'static, peripherals::ADC2>,
+    pub adc3: Peri<'static, peripherals::ADC3>,
+    pub phase_a: Peri<'static, peripherals::PA0>,
+    pub phase_b: Peri<'static, peripherals::PA1>,
+    pub phase_c: Peri<'static, peripherals::PB0>,
+    pub bus_voltage: Peri<'static, peripherals::PA2>,
+    pub ntc: Peri<'static, peripherals::PA3>,
+}
+
+pub fn init_injected_adcs(resources: InjectedAdcResources) {
+    let InjectedAdcResources {
+        adc1,
+        adc2,
+        adc3,
+        phase_a,
+        phase_b,
+        phase_c,
+        bus_voltage,
+        ntc,
+    } = resources;
     let phase_a = PHASE_A_PIN.init(phase_a).reborrow_adc();
     let phase_b = PHASE_B_PIN.init(phase_b).reborrow_adc();
     let phase_c = PHASE_C_PIN.init(phase_c).reborrow_adc();
@@ -209,40 +228,34 @@ pub fn init_injected_adcs(
         false,
     );
 
-    critical_section::with(|cs| {
-        ADC1_HANDLE.borrow(cs).replace(Some(adc1));
-        ADC2_HANDLE.borrow(cs).replace(Some(adc2));
-        ADC3_HANDLE.borrow(cs).replace(Some(adc3));
+    ADC_HANDLES.lock(|handles| {
+        handles.replace(Some(AdcHandles { adc1, adc2, adc3 }));
     });
+}
 
+pub fn enable_injected_adc_interrupt() {
     ADC1_2::unpend();
     unsafe { ADC1_2::enable() };
 }
 
 pub async fn wait_for_adc_frame() -> RawAdcFrame {
-    ADC_FRAME_SIGNAL.wait().await
+    let frame = ADC_FRAME_SIGNAL.wait().await;
+    ADC_FRAME_CONSUMED.store(true, Ordering::Release);
+    frame
 }
 
 #[interrupt]
 unsafe fn ADC1_2() {
-    let samples = critical_section::with(|cs| {
-        let mut adc1_handle = ADC1_HANDLE.borrow(cs).borrow_mut();
-        let mut adc2_handle = ADC2_HANDLE.borrow(cs).borrow_mut();
-        let mut adc3_handle = ADC3_HANDLE.borrow(cs).borrow_mut();
-        let (Some(adc1), Some(adc2), Some(adc3)) = (
-            adc1_handle.as_mut(),
-            adc2_handle.as_mut(),
-            adc3_handle.as_mut(),
-        ) else {
-            return None;
-        };
+    let samples = ADC_HANDLES.lock(|handles| {
+        let mut handles = handles.borrow_mut();
+        let handles = handles.as_mut()?;
 
         let mut adc1_samples = [0; 3];
         let mut adc2_samples = [0; 1];
         let mut adc3_samples = [0; 1];
-        adc1.read_injected_samples(&mut adc1_samples);
-        adc2.read_injected_samples(&mut adc2_samples);
-        adc3.read_injected_samples(&mut adc3_samples);
+        handles.adc1.read_injected_samples(&mut adc1_samples);
+        handles.adc2.read_injected_samples(&mut adc2_samples);
+        handles.adc3.read_injected_samples(&mut adc3_samples);
         Some((adc1_samples, adc2_samples[0], adc3_samples[0]))
     });
 
@@ -256,7 +269,8 @@ unsafe fn ADC1_2() {
             sequence: ADC_SEQUENCE
                 .fetch_add(1, Ordering::Relaxed)
                 .wrapping_add(1),
-            overrun: ADC_FRAME_SIGNAL.signaled(),
+            overrun: ADC_FRAME_CONSUMED.load(Ordering::Acquire)
+                && ADC_FRAME_SIGNAL.signaled(),
         });
     }
 }
@@ -459,6 +473,10 @@ impl RotorSensor for HallSensor<'_> {
             self.time_since_transition = 0.0;
         } else if self.time_since_transition > 0.5 {
             self.electrical_velocity = 0.0;
+        } else {
+            self.electrical_angle = normalize_angle(
+                self.electrical_angle + self.electrical_velocity * dt,
+            );
         }
 
         RotorSample {

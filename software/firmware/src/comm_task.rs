@@ -1,3 +1,4 @@
+#[cfg(target_arch = "arm")]
 use core::fmt::{self, Write};
 
 use crate::interfaces::{Command, ControlMode, MotorState, Telemetry};
@@ -115,6 +116,18 @@ fn next_pid<'a>(
 }
 
 pub fn decode_can_command(id: u16, data: &[u8]) -> Option<Command> {
+    let expected_length = match id {
+        | CAN_CONTROL_ID | CAN_CELL_COUNT_ID => 1,
+        | CAN_IQ_TARGET_ID
+        | CAN_VELOCITY_TARGET_ID
+        | CAN_ELECTRICAL_ZERO_ID => 4,
+        | CAN_OPEN_LOOP_ID => 8,
+        | _ => return None,
+    };
+    if data.len() != expected_length {
+        return None;
+    }
+
     match id {
         | CAN_CONTROL_ID => match *data.first()? {
             | 0 => Some(Command::Disable),
@@ -203,11 +216,13 @@ fn scaled_u16(value: f32, scale: f32) -> u16 {
     (value * scale).clamp(0.0, u16::MAX as f32) as u16
 }
 
+#[cfg(target_arch = "arm")]
 struct TextBuffer<const N: usize> {
     bytes: [u8; N],
     len: usize,
 }
 
+#[cfg(target_arch = "arm")]
 impl<const N: usize> TextBuffer<N> {
     const fn new() -> Self {
         Self {
@@ -221,6 +236,7 @@ impl<const N: usize> TextBuffer<N> {
     }
 }
 
+#[cfg(target_arch = "arm")]
 impl<const N: usize> Write for TextBuffer<N> {
     fn write_str(&mut self, value: &str) -> fmt::Result {
         let end = self.len.checked_add(value.len()).ok_or(fmt::Error)?;
@@ -233,12 +249,12 @@ impl<const N: usize> Write for TextBuffer<N> {
     }
 }
 
+#[cfg(target_arch = "arm")]
 fn format_telemetry(
     telemetry: &Telemetry,
     output: &mut TextBuffer<256>,
 ) -> fmt::Result {
-    write!(
-        output,
+    output.write_fmt(format_args!(
         "seq={} state={} faults={:08x} ia={:.2} ib={:.2} ic={:.2} id={:.2} iq={:.2} vbus={:.2} vel={:.2} temp={:.1}\r\n",
         telemetry.sequence,
         state_code(telemetry.state),
@@ -251,7 +267,7 @@ fn format_telemetry(
         telemetry.bus_voltage,
         telemetry.mechanical_velocity,
         telemetry.junction_temperature,
-    )
+    ))
 }
 
 #[cfg(target_arch = "arm")]
@@ -263,6 +279,7 @@ mod tasks {
     use embassy_sync::channel::Channel;
     use embassy_sync::watch::Watch;
     use embassy_time::Timer;
+    use embedded_can::Id;
 
     use super::*;
 
@@ -283,6 +300,7 @@ mod tasks {
     pub async fn uart_task(mut uart: Uart<'static, Async>) {
         let mut line = [0u8; 128];
         let mut length = 0;
+        let mut discarding_line = false;
 
         loop {
             let mut byte = [0u8; 1];
@@ -294,6 +312,12 @@ mod tasks {
             match byte[0] {
                 | b'\r' => {},
                 | b'\n' => {
+                    if discarding_line {
+                        discarding_line = false;
+                        length = 0;
+                        let _ = uart.write(b"line-too-long\r\n").await;
+                        continue;
+                    }
                     let request = core::str::from_utf8(&line[..length])
                         .map_err(|_| ParseError::InvalidArgument)
                         .and_then(parse_uart_request);
@@ -322,13 +346,13 @@ mod tasks {
                         },
                     }
                 },
-                | value if length < line.len() => {
+                | value if !discarding_line && length < line.len() => {
                     line[length] = value;
                     length += 1;
                 },
                 | _ => {
+                    discarding_line = true;
                     length = 0;
-                    let _ = uart.write(b"line-too-long\r\n").await;
                 },
             }
         }
@@ -340,7 +364,13 @@ mod tasks {
             match receiver.read().await {
                 | Ok(envelope) => {
                     let frame = envelope.frame;
-                    let id = (frame.priority() >> 18) as u16;
+                    if frame.header().rtr() || frame.header().fdcan() {
+                        continue;
+                    }
+                    let id = match frame.header().id() {
+                        | Id::Standard(id) => id.as_raw(),
+                        | Id::Extended(_) => continue,
+                    };
                     if let Some(command) = decode_can_command(id, frame.data())
                     {
                         COMMANDS.send(command).await;
@@ -412,6 +442,11 @@ mod tests {
             Some(Command::SetIq(12.5))
         );
         assert_eq!(decode_can_command(CAN_OPEN_LOOP_ID, &[0; 4]), None);
+        assert_eq!(decode_can_command(CAN_CONTROL_ID, &[0, 0]), None);
+        assert_eq!(
+            decode_can_command(CAN_IQ_TARGET_ID, &[0, 0, 0, 0, 0]),
+            None
+        );
     }
 
     #[test]

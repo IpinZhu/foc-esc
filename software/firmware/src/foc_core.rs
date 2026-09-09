@@ -47,6 +47,10 @@ pub struct FocConfig {
     pub stall_min_iq: f32,
     pub stall_time: f32,
     pub sensor_fault_time: f32,
+    pub maximum_velocity: f32,
+    pub maximum_open_loop_velocity: f32,
+    pub temperature_sensor_zero_voltage: f32,
+    pub temperature_sensor_volts_per_degree: f32,
     pub current_pid: PidConfig,
     pub velocity_pid: PidConfig,
 }
@@ -63,8 +67,8 @@ impl Default for FocConfig {
             adc_full_scale: 4_095.0,
             current_sense_gain: 50.0,
             shunt_resistance: 0.000_5,
-            bus_divider_high: 47_000.0,
-            bus_divider_low: 6_200.0,
+            bus_divider_high: 100_000.0,
+            bus_divider_low: 10_000.0,
             calibration_samples: 1_024,
             minimum_duty: 0.05,
             maximum_duty: 0.95,
@@ -88,6 +92,10 @@ impl Default for FocConfig {
             stall_min_iq: 10.0,
             stall_time: 0.5,
             sensor_fault_time: 0.002,
+            maximum_velocity: 1_000.0,
+            maximum_open_loop_velocity: 10_000.0,
+            temperature_sensor_zero_voltage: 0.5,
+            temperature_sensor_volts_per_degree: 0.01,
             current_pid: PidConfig::new(0.2, 20.0, 0.0, 30.0, f32::INFINITY),
             velocity_pid: PidConfig::new(0.4, 2.0, 0.0, 50.0, 200.0),
         }
@@ -140,6 +148,7 @@ pub struct FocController {
     residual_count: u16,
     sensor_invalid_count: u32,
     stall_count: u32,
+    calibration_complete: bool,
     previous_sequence: Option<u32>,
     last_duty: PhaseDuty,
     bus_current_average: f32,
@@ -171,6 +180,7 @@ impl FocController {
             residual_count: 0,
             sensor_invalid_count: 0,
             stall_count: 0,
+            calibration_complete: false,
             previous_sequence: None,
             last_duty: PhaseDuty::DISABLED,
             bus_current_average: 0.0,
@@ -202,8 +212,14 @@ impl FocController {
             | Command::ClearFault => {
                 if self.state == MotorState::Fault && self.safe_to_clear() {
                     self.faults.clear();
-                    self.state = MotorState::Idle;
                     self.reset_loops();
+                    if self.calibration_complete {
+                        self.state = MotorState::Idle;
+                    } else {
+                        self.calibrator = OffsetCalibrator::default();
+                        self.offsets = [0.0; 3];
+                        self.state = MotorState::Calibrating;
+                    }
                 }
             },
             | Command::Enable(mode) => self.try_enable(mode),
@@ -214,13 +230,19 @@ impl FocController {
                 )
             },
             | Command::SetVelocity(velocity) if velocity.is_finite() => {
-                self.target_velocity = velocity
+                self.target_velocity = velocity.clamp(
+                    -self.config.maximum_velocity,
+                    self.config.maximum_velocity,
+                )
             },
             | Command::SetOpenLoop {
                 electrical_velocity,
                 q_voltage,
             } if electrical_velocity.is_finite() && q_voltage.is_finite() => {
-                self.open_loop_velocity = electrical_velocity;
+                self.open_loop_velocity = electrical_velocity.clamp(
+                    -self.config.maximum_open_loop_velocity,
+                    self.config.maximum_open_loop_velocity,
+                );
                 self.open_loop_q_voltage = q_voltage;
             },
             | Command::SetCellCount(cells)
@@ -264,12 +286,19 @@ impl FocController {
             self.trip(FaultFlags::CONTROL_OVERRUN);
         }
         let bus_voltage = self.raw_to_bus_voltage(raw.bus_voltage);
+        let sensor_temperature = self.raw_to_temperature(raw.ntc);
 
         if self.state == MotorState::Calibrating {
+            self.update_thermal(
+                PhaseCurrents::default(),
+                dt,
+                sensor_temperature,
+            );
             if let Some(offsets) =
                 self.calibrator.push(raw, self.config.calibration_samples)
             {
                 self.offsets = offsets;
+                self.calibration_complete = true;
                 self.state = MotorState::Idle;
             }
             return self.finish_step(
@@ -291,7 +320,7 @@ impl FocController {
         let filter_alpha = dt / (self.config.bus_filter_time_constant + dt);
         self.bus_current_average +=
             filter_alpha * (bus_current - self.bus_current_average);
-        self.update_thermal(currents, dt);
+        self.update_thermal(currents, dt, sensor_temperature);
         self.run_protections(currents, bus_voltage, rotor, dt);
 
         if self.state == MotorState::Fault || self.state == MotorState::Idle {
@@ -330,7 +359,9 @@ impl FocController {
         let voltage_dq = match mode {
             | ControlMode::OpenLoop => Dq {
                 d: 0.0,
-                q: self.open_loop_q_voltage,
+                q: self
+                    .open_loop_q_voltage
+                    .clamp(-0.5 * bus_voltage, 0.5 * bus_voltage),
             },
             | ControlMode::Current => self.run_current_loop(
                 current_dq,
@@ -386,7 +417,16 @@ impl FocController {
             return;
         }
         self.reset_loops();
-        self.open_loop_angle = 0.0;
+        self.open_loop_angle = if self.last_telemetry.sensor_valid {
+            normalize_angle(
+                self.config.sensor_direction
+                    * self.config.pole_pairs as f32
+                    * self.last_telemetry.mechanical_angle
+                    - self.config.electrical_zero,
+            )
+        } else {
+            0.0
+        };
         self.state = MotorState::Running(mode);
     }
 
@@ -516,7 +556,12 @@ impl FocController {
         }
     }
 
-    fn update_thermal(&mut self, currents: PhaseCurrents, dt: f32) {
+    fn update_thermal(
+        &mut self,
+        currents: PhaseCurrents,
+        dt: f32,
+        sensor_temperature: f32,
+    ) {
         let conduction_loss = self.config.mosfet_hot_resistance
             * (currents.a * currents.a
                 + currents.b * currents.b
@@ -526,6 +571,10 @@ impl FocController {
             self.junction_temperature - self.config.ambient_temperature;
         self.junction_temperature += (target_rise - current_rise) * dt
             / self.config.thermal_time_constant.max(dt);
+        if sensor_temperature.is_finite() {
+            self.junction_temperature =
+                self.junction_temperature.max(sensor_temperature);
+        }
     }
 
     fn derated_current_limit(&self) -> f32 {
@@ -561,6 +610,16 @@ impl FocController {
             / self.config.bus_divider_low
     }
 
+    fn raw_to_temperature(&self, raw: u16) -> f32 {
+        let voltage = raw as f32 * self.config.adc_reference_voltage
+            / self.config.adc_full_scale;
+        let slope = self.config.temperature_sensor_volts_per_degree;
+        if !voltage.is_finite() || !slope.is_finite() || slope <= 0.0 {
+            return self.config.ambient_temperature;
+        }
+        (voltage - self.config.temperature_sensor_zero_voltage) / slope
+    }
+
     fn bus_limits(&self) -> (f32, f32) {
         let cells = self.config.battery_cells.clamp(2, 6) as f32;
         (
@@ -579,6 +638,15 @@ impl FocController {
     }
 
     fn safe_to_clear(&self) -> bool {
+        let (_, maximum_voltage) = self.bus_limits();
+        if self.junction_temperature >= self.config.shutdown_temperature
+            || self.last_telemetry.bus_voltage > maximum_voltage
+        {
+            return false;
+        }
+        if !self.calibration_complete {
+            return true;
+        }
         let maximum_current = self
             .last_telemetry
             .currents
@@ -586,13 +654,15 @@ impl FocController {
             .abs()
             .max(self.last_telemetry.currents.b.abs())
             .max(self.last_telemetry.currents.c.abs());
-        let (_, maximum_voltage) = self.bus_limits();
         maximum_current < 1.0
-            && self.last_telemetry.bus_voltage <= maximum_voltage
     }
 
     fn bridge_requested(&self) -> bool {
-        matches!(self.state, MotorState::Running(_))
+        let mut requested = false;
+        if let MotorState::Running(_) = self.state {
+            requested = true;
+        }
+        requested
     }
 
     fn trip(&mut self, fault: FaultFlags) {
@@ -666,6 +736,16 @@ mod tests {
         bus_voltage: f32,
         config: FocConfig,
     ) -> RawAdcFrame {
+        raw_with_ntc(sequence, phase, bus_voltage, 930, config)
+    }
+
+    fn raw_with_ntc(
+        sequence: u32,
+        phase: u16,
+        bus_voltage: f32,
+        ntc: u16,
+        config: FocConfig,
+    ) -> RawAdcFrame {
         let bus_scale = config.adc_reference_voltage / config.adc_full_scale
             * (config.bus_divider_high + config.bus_divider_low)
             / config.bus_divider_low;
@@ -674,7 +754,7 @@ mod tests {
             phase_b: phase,
             phase_c: phase,
             bus_voltage: (bus_voltage / bus_scale) as u16,
-            ntc: 2_048,
+            ntc,
             sequence,
             overrun: false,
         }
@@ -750,6 +830,58 @@ mod tests {
         assert!(controller.faults().contains(FaultFlags::CONTROL_OVERRUN));
     }
 
+    #[test]
+    fn ntc_temperature_trips_overtemperature() {
+        let (mut controller, config, sequence) = calibrated_controller();
+        controller.handle_command(Command::Enable(ControlMode::OpenLoop));
+        let hot_ntc = ((0.5 + 130.0 * 0.01) / 3.3 * 4_095.0) as u16;
+        controller.step(
+            raw_with_ntc(sequence + 1, 2_048, 24.0, hot_ntc, config),
+            RotorSample::default(),
+        );
+        assert_eq!(controller.state(), MotorState::Fault);
+        assert!(controller.faults().contains(FaultFlags::OVER_TEMPERATURE));
+    }
+
+    #[test]
+    fn fault_during_calibration_restarts_calibration_on_clear() {
+        let mut config = FocConfig::default();
+        config.calibration_samples = 4;
+        let mut controller = FocController::new(config);
+        let mut frame = raw_with_ntc(1, 0, 24.0, 930, config);
+        frame.overrun = true;
+        controller.step(frame, RotorSample::default());
+        assert_eq!(controller.state(), MotorState::Fault);
+
+        controller.handle_command(Command::ClearFault);
+        assert_eq!(controller.state(), MotorState::Calibrating);
+        for sequence in 2..=5 {
+            controller.step(
+                raw(sequence, 2_048, 24.0, config),
+                RotorSample {
+                    mechanical_angle: 0.0,
+                    mechanical_velocity: 0.0,
+                    valid: true,
+                },
+            );
+        }
+        assert_eq!(controller.state(), MotorState::Idle);
+        assert_eq!(controller.offsets(), [2_048.0; 3]);
+    }
+
+    #[test]
+    fn command_velocity_is_bounded() {
+        let (mut controller, config, sequence) = calibrated_controller();
+        controller.handle_command(Command::SetVelocity(f32::MAX));
+        controller.step(
+            raw(sequence + 1, 2_048, 24.0, config),
+            RotorSample::default(),
+        );
+        assert_eq!(
+            controller.telemetry().target_velocity,
+            config.maximum_velocity
+        );
+    }
     #[test]
     fn bus_current_reconstruction_rejects_common_mode() {
         let duty = PhaseDuty {
