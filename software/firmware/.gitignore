@@ -5,3 +5,5 @@
 *.elf
 *.bin
 *.hex
+
+.vscode

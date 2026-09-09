@@ -1,386 +1,117 @@
-# FOC 三相无刷驱动器 — 设计文档
+# STM32G473 Three-Phase FOC Drive
 
-> 基于 STM32G473RC 的三相永磁同步电机 (PMSM) 磁场定向控制 (FOC) 驱动器
-> 设计目标:高侧/低侧分立的 N-MOS 三相桥 + 半桥栅极驱动 + 三相电阻分流采样
-> 母线电流/功率监测与故障诊断由**软件实现**(已取消 INA226,见 §2.4)
+An experimental three-phase PMSM/BLDC motor-control platform built around the STM32G473RC. The repository contains the drive-board design and a Rust 2024 + Embassy firmware implementation for current-controlled field-oriented control (FOC).
 
----
+> **Safety notice:** This is a high-current power-electronics prototype. The firmware and PCB have not been electrically qualified or validated for production use. Do not connect a motor or battery until the gate waveforms, dead time, current-sense polarity, ADC timing, fault response, insulation/clearance, and thermal behavior have been checked with appropriate laboratory equipment and current limiting.
 
-## 1. 项目概述
+## Current implementation
 
-本项目实现一套完整的 FOC 电机驱动器软硬件方案,面向中小功率 PMSM / BLDC(BLDC 通过梯形波/正弦波兼容)。系统以 **STM32G473RC** 为主控,使用 **3 路 UCC27211** 半桥栅极驱动器驱动 **6 颗 070N10NS** N-MOSFET 组成三相逆变桥,相电流采样采用 **3 颗 INA240A2 + 0.5 mΩ/3 W 相分流电阻**;母线电流/功率遥测与故障诊断由软件基于相电流与占空比重建实现(不再使用 INA226)。
+The active firmware is in [`software/firmware`](software/firmware) and targets the STM32G473RC:
 
-软件框架已在此仓库中初步落地 [`software/FOCTestPrj/`](software/FOCTestPrj/),
-核心为 `FOCMotor`(FOC 算法)、`FOCDriver`(PWM/驱动抽象)、`FOCSensor`(角度/电流传感抽象)、`PIDController`(PID) 的可移植分层结构。
+- TIM1 center-aligned complementary PWM on PA8/PA9/PA10 and PB13/PB14/PB15.
+- Configured PWM frequency: **100 kHz**.
+- Configured dead time: **200 ns** at a 170 MHz timer clock.
+- Duty-cycle range: 5%–95%.
+- Three-phase current feedback through INA240A2 amplifiers and 0.5 mΩ shunts.
+- Timer-triggered ADC sampling of phase currents, VBUS, and the TMP235 temperature sensor.
+- Current and velocity FOC modes, open-loop mode, startup current-offset calibration, SVPWM, telemetry, and software fault handling.
+- Compile-time rotor-sensor selection:
+  - `sensor-encoder` (default): TIM3 quadrature encoder on PB4/PB5.
+  - `sensor-hall`: TIM3 Hall input capture on PC6/PC7/PC8.
+- USART3 ASCII debug commands on PB10/PB11.
+- FDCAN1 classic CAN control and telemetry on PA11/PA12.
 
-**本文档与硬件设计、软件框架同步维护**,本文档中 `[待定]` 标记的项需在打板/调试前确认。
+The active firmware uses **software-only protection for this iteration**. It does not enable the COMP-to-DAC-to-TIM1-BRK hardware over-current chain. Software protection includes current threshold/debounce, phase-current residual, bus under/over-voltage, modeled and sensor temperature, stall, sensor validity, and control-overrun handling. Software protection is not a substitute for a validated hardware shutdown path.
 
-### 系统主要指标
+## System overview
 
-| 项目 | 指标 | 备注 |
-|---|---|---|
-| 母线电压(电池输入) | **2S~6S:5.5~25.2 V**(欠压切除 ~6 V@2S,按节数可配置) | 070N10NS 100 V / UCC27211 120 V / INA240A2 共模 80 V,裕量充足;电机最高转速受 25.2 V 母线限制(约为 48 V 方案的一半) |
-| 额定相电流(连续) | ≤ 50 A | 受 MOS 导通损耗与散热限制(60 A 时桥臂导通损耗 ≈ 38 W,见 §2.3) |
-| 峰值相电流 | ≤ 60 A | **由采样链满量程决定**(±60 A,见 §2.5),同时为 070N10NS 留裕量 |
-| 过流保护阈值 | ~55 A(可配置) | 硬件 COMP→BRK + 软件双重 |
-| PWM 频率 | 20 kHz(默认)/ 40 kHz(可选) | TIM1/TIM8 中心对齐,死区硬件插入 |
-| 电流环执行率 | 20 kHz(每 PWM 周期一次) | ADC 注入组由 TIM1 触发同步采样 |
-| 电流环闭环带宽 | ≥ 2 kHz | 经验值 ≈ PWM 频率 / 10 |
-| 速度环执行率 | 1 kHz | 载于电流环之上 |
-| 电流采样分辨率 | ≈ 32 mA/LSB(12 bit) | 16× 过采样后有效 ≈ 8 mA |
-| 母线电流/功率遥测 | 软件重建,精度约 ±5% | 由相电流 × 占空比计算,见 §2.4 |
-| 通讯 | UART/USART、SWD、CAN(I2C 空闲可扩展) | |
+```text
+                    +-----------------------------+
+  Encoder / Hall -->|                             |--> TIM1 complementary PWM
+  Phase currents -->|       STM32G473RC           |       (100 kHz, 200 ns)
+  VBUS / TMP235 --->|       Rust + Embassy        |--> UCC27211 x3
+  UART ------------>|       FOC controller        |--> 070N10NS-class bridge
+  FDCAN ----------->|                             |<-- INA240A2 x3 + shunts
+                    +-----------------------------+
+```
 
----
+The firmware separates the high-rate control path from communications. ADC frames wake the motor-control task; UART and CAN tasks exchange commands and telemetry through bounded Embassy synchronization primitives.
 
-## 2. 主要器件选型
+## Repository layout
 
-### 2.1 主控 MCU — STM32G473RC (LQFP64 / UFQFPN)
-
-选用理由(STM32G4 系列是 ST 面向电机控制的专用系列):
-
-- **Cortex-M4F @ 170 MHz**,数学能力足以运行 FOC 算法(Clarke/Park/PID)。
-- **高级定时器 TIM1 / TIM8**:6 通道互补 PWM,死区插入,再生电流/重复计数器,可直接硬件产生三相六路 PWM。
-- **5 路 ADC** 中多路支持与定时器事件对齐的**注入/规则转换**,用于 PWM 中心对齐的关键点电流采样。
-- **片上 6 × 运算放大器 (OPA) + 5 × 比较器 (COMP) + 2 × DAC**:
-  - 运放可直接放大分流电阻电压作为相电流采样前端;
-  - 比较器可实现**硬件快速过流保护 (OCP)**(ns 级,不打中断时也能关断 PWM)。
-- 内部提供丰富外设(SPI/I2C/UART),便于扩展。
-
-> 注:既有代码工程基于 STM32H743 编写(`software/FOCTestPrj/mcu/` 下为 H743 的 `.ioc`/启动文件),**需按 G473RC 重新生成外设工程**并移植上层 `FOCMotor/FOCDriver/FOCSensor` 抽象,见 §7。
-
-### 2.2 栅极驱动器 — UCC27211 (×3)
-
-UCC27211 为 120 V、4 A 峰值输出的**高频半桥栅极驱动器**,非常适合隔离/非隔离高低侧应用,关键特性:
-
-| 参数 | 值 |
+| Path | Purpose |
 |---|---|
-| 电源 VDD | 8 V ~ 17 V(UVLO 开启 ~7 V;栅极高电平摆幅 = VDD);自举高侧浮地耐压 120 V;VDRV 取 10 V |
-| 高/低侧输出峰值电流 | 4 A / 4 A |
-| 传播延迟 | 典型 ~18 ns |
-| 开关频率 | 最高 ~2 MHz(满足 40 kHz 后仍余量充足) |
-| 逻辑输入 | 兼容 TTL/CMOS,输入带下拉,防上电误触发 |
-| 输入类型 | 两输入 (HI、LI) 独立控制高/低侧 |
+| [`software/firmware`](software/firmware) | Rust/Embassy STM32G473RC firmware |
+| [`hardware/foc-drive/FOC2.kicad_pro`](hardware/foc-drive/FOC2.kicad_pro) | Main drive-board KiCad project |
+| [`hardware/foc-drive/FOC2.kicad_sch`](hardware/foc-drive/FOC2.kicad_sch) | Main drive-board schematic |
+| [`hardware/foc-drive/FOC2.kicad_pcb`](hardware/foc-drive/FOC2.kicad_pcb) | Main drive-board PCB layout |
+| [`hardware/foc-expansion/foc-ex.kicad_pro`](hardware/foc-expansion/foc-ex.kicad_pro) | Expansion-board KiCad project |
+| [`hardware/foc-expansion/foc-ex.kicad_sch`](hardware/foc-expansion/foc-ex.kicad_sch) | Expansion-board schematic |
+| [`hardware/foc-expansion/foc-ex.kicad_pcb`](hardware/foc-expansion/foc-ex.kicad_pcb) | Expansion-board PCB layout |
+| [`foc/foc.ioc`](foc/foc.ioc) | STM32G473 CubeMX reference configuration; not the runtime firmware source of truth |
 
-**三相桥拓扑**:3 个半桥 = 需要 **3 × UCC27211**,每相 1 颗。
+Generated manufacturing output, editor state, backups, and firmware binaries are not treated as source-of-truth design files.
 
-- 每相高侧 UCC27211 的 **HB-HS 自举**:高侧栅极供电来自自举电容,需在 HS 与 HB 间放置 ≥ 100 nF 自举电容 + 自举二极管。在 20~40 kHz 下自举电容按 **1 µF 数量级**选择保证高侧导通时间内的电荷支撑。
-- **HS (自举地) 设计注意**:UCC27211 的高侧输出以 HS 为参考,须保证 HS 电压摆动不超过逻辑地允许范围;必要时在 PCB 布线上给 HS 加 RC 吸收以抑制 di/dt 产生的振铃/负过冲。
-- 每路输出串联 **栅极电阻 Rg(典型 1 Ω ~ 10 Ω)**,用于限制 dV/dt、抑制开关振铃。
+## Build and test
 
-> 说明:UCC27211 每颗只驱动一个半桥(1 高 1 低),与「6 个 MOS / 3 相」一一对应,done.
+Run these commands from the repository root. The firmware has its own Cargo configuration for linker scripts and the `probe-rs` runner. When invoking Cargo from the root, pass that configuration explicitly.
 
-### 2.3 功率 MOS — 070N10NS (×6)
+### Host tests and lint
 
-| 参数 (典型值,以数据手册为准) | 值 |
-|---|---|
-| VDS | 100 V |
-| ID (连续) | 70 A @ 25 °C |
-| RDS(on) | ~7 mΩ (VGS=10 V) `[复核]` |
-| VGS(th) | ~1.4 V ~ 2.4 V |
-| 封装 | TO-252 (DPAK) 等 |
-
-- 三相桥上下桥臂各 3 颗,共 **6 颗**,成 3 相半桥。
-- **栅极驱动电压**:070N10NS 需要 VGS 尽量高以获得低 RDS(on);UCC27211 的 VDD 建议取 **10 V~12 V**,由板上独立栅极供电轨 (VDRV) 提供。
-- **续流**:利用 MOS 体二极管 + 必要时并联合适的 RC snubber 抑制开关尖峰;若需更低损耗可外挂肖特基(小型电机通常省略)。
-- **损耗/散热核算**(RDS(on) 按 7 mΩ,100 °C 下约 ×1.4 ≈ 10 mΩ):
-  - 三相桥导通损耗 ≈ 3 × I_phase_rms² × RDS(on)(上下管轮流导通,每桥臂等效全周期承载相电流)。
-  - 50 A 峰值正弦(35.4 A rms)→ 常温 ≈ 26 W,热态 ≈ 38 W;60 A 峰值(42.4 A rms)→ 常温 ≈ 38 W,热态 ≈ 54 W。
-  - 结论:**连续 50 A 以上必须散热器 + 风道**;电池输入(≤25.2 V)较低,MOS 开关损耗(V·I 交叠损耗)显著低于 48 V 方案,系统损耗以导通损耗为主,散热核算仍按下表进行。
-- **散热**:连续大电流必须配合散热器与风道;额定连续相电流指标据此定为 ≤ 50 A。
-
-### 2.4 母线监测与故障诊断 — 软件实现(已取消 INA226)
-
-原方案用 INA226 做母线电流/功率遥测,**现决定取消**,原因与替代方案:
-
-- INA226 是毫秒级平均式监测,信息本质上可由相电流与占空比完全重建;
-- 省去 I2C 器件、母线分流电阻与一路 BOM/布线;
-- 快速保护本就不依赖它(硬件 OCP 由 §6 的 COMP→BRK 承担)。
-
-**软件母线电流重建**(每个 PWM 周期执行):
-
-1. **瞬时母线电流**:`I_bus = d_a·i_a + d_b·i_b + d_c·i_c`(d 为本周期各相上管 PWM 占空比,i 为本周期同步采样的相电流;下管导通时该相不流向母线)。
-2. **平均母线电流**:对上式按 PWM 周期做滑动平均(与三角载波对齐的一个电周期内积分更准)。
-3. **功率/效率**:`P_in = Vbus × I_bus_avg`,与 `P_out = 3/2 × (ud·id + iq·iq)` 对比估算效率。
-
-**母线电压检测**:增加一路电阻分压 → ADC 常规通道(与相电流注入采样错开),分压参数:
-
-- 分压比 ≈ 0.1165(R1 = 47 kΩ,R2 = 6.2 kΩ,均 0.1%):25.2 V(6S 满充)→ 2.94 V,5.5 V(2S 底端)→ 0.64 V,均在 12 bit ADC 量程内且最大化利用量程;
-- 分压点加 100 nF + 1 kΩ RC 滤波(截止 ≈ 1.6 kHz,远高于母线电压变化率,远低于开关噪声);精度受电阻比决定,约 ±0.3%,满足 OV/UV 保护的分压比容差。
-
-**精度评估**:该重建精度约 **±5%**(占空比截断误差 + 相电流增益误差 + 忽略死区内续流),作为遥测/能效评估/二级保护阈值足够;不用于计量。
-
-**软件故障诊断**(不依赖专用监测芯片,见 §6 完整表):
-
-- 相电流残差 `|i_a + i_b + i_c| > 阈值` → 分流/放大器/ADC 通道故障或相线断路;
-- 母线电流重建值持续为零但带转矩指令、或与逆变输出矛盾 → 桥臂开路/失效诊断;
-- I²t 热模型:由相电流累计估算 MOS 结温,做降额与关断(比纯阈值过流更早发现慢性过载);
-- 转速/位置跟踪异常 → 堵转、传感器丢失诊断。
-
-### 2.5 相电流采样 — INA240A2 (×3) + 0.5 mΩ/3 W 相分流电阻
-
-TI 专为电机控制设计的**高带宽、双向、带 PWM 抗误差**电流检测放大器,直接用于三相 FOC 电流环采样:
-
-| 参数 (典型) | 值 |
-|---|---|
-| 供电 | 2.7 V ~ 5.5 V(**本设计取 3.3 V,与 ADC 同轨**) |
-| 输入共模电压范围 | -4 V ~ 80 V(覆盖 25.2 V 电池母线的全 PWM 摆幅,余量很大) |
-| 放大增益 (A2) | **50 V/V**(注意:A1=20,A2=50,A3=100,A4=200;原文档误写 40) |
-| 增益误差 | ±0.05%(典型)/ ±0.1%(最大) |
-| 带宽 | 400 kHz |
-| 输入失调电压 | 典型 ±25 µV / 最大 ±125 µV |
-| PWM 抗误差 | 增强型,可抑制电机 PWM 共模瞬变 |
-| 封装 | SOT-23-8 / VSSOP-8(**D 与 PW 封装引脚排列不同,画图前按手册核对**) |
-
-**分流电阻选型(已定)**:每相 **0.5 mΩ / 3 W**,四端子(开尔文)合金采样电阻。
-
-**接线方式(已定,无需 1.65 V 基准源)**:
-
-- **REF1 接 GND、REF2 接 3.3 V(VS)**:两脚内部各取 1/2 权重,零电流输出 = (0+3.3)/2 = **1.65 V**,无需分压电阻;
-- 与 ADC 满量程同源(比例式),3.3 V 轨波动不引入读数误差;
-- VS 用 3.3 V 供电时**输出永不超过 ADC 量程**,G473 ADC 引脚天然安全(5 V 供电则过流时输出会顶到 ~4.8 V,需串联电阻保护 ADC);
-- 注意 REF 脚电压必须在 GND ~ VS 之间;IN+ 接 Rs 靠桥侧、IN− 接 Rs 靠电机侧(电流流入电机为正)。
-
-**采样链完整核算**(ADC 为 G473 12 bit,量程 0 ~ 3.3 V;VS = 3.3 V,零点 = 1.65 V):
-
-| 项目 | 计算与结果 |
-|---|---|
-| 满量程电流 | 摆幅受输出级限制(距轨约 0.1 V,±1.55 V)→ ±1.55 V ÷ 50 V/V ÷ 0.5 mΩ ≈ **±60 A** |
-| 50 A 时输出 | 1.65 ± 1.25 V → 0.4 ~ 2.9 V ✓ |
-| 分辨率 | 3.3 V ÷ 4096 ÷ 50 ÷ 0.5 mΩ ≈ **32 mA/LSB**;16× 过采样后有效 ≈ 8 mA |
-| 失调误差 | 最大 ±125 µV → **±0.25 A** → 必须做上电零偏校准(三电阻均需) |
-| 增益误差 | ±0.1% of 读数 + 分流电阻 ±1%(0.5 mΩ 精度档)→ 60 A 处约 ±0.7 A,闭环可接受 |
-| 分流压降 | 60 A × 0.5 mΩ = 30 mV,对电机影响可忽略 |
-| 分流功耗 | 50 A 连续 → 1.25 W(42% 额定);60 A → 1.8 W(60%,需覆铜散热) |
-| 带宽/延迟 | 400 kHz 带宽,建立时间 µs 级,满足 20 kHz 电流环 |
-
-**在三相桥中的作用(每相 1 颗,共 3 颗)**:
-
-- 每相分流电阻**串接在电机相线**(下管源极到电机之间亦可;本设计取相线,共模随相电压摆动,INA240 宽共模 + PWM 抗误差正好适配)。
-- 差分开尔文连接分流电阻,输出经 RC 滤波(建议 100 Ω + 1 nF,截止 ≈ 1.6 MHz,只滤开关毛刺不引入电流环相移)后送 MCU ADC。
-- 三相同时测量,`ia+ib+ic≈0` 用作故障残差检测(§2.4);也天然支持任意两相推算第三相的降级运行。
-
-> 量程结论:**峰值指标定为 ≤ 60 A**,过流阈值建议 ~55 A;若未来需要更大峰值,换 INA240A1(20 V/V,量程 ×2.5)即可,REF 接法与 RC 外围不变。
-
----
-
-## 3. 系统框图
-
-```
-                     ┌─────────────────────────────────────────────┐
-                     │              STM32G473RC                   │
-                     │                                             │
-   角度/速度 ──────►  │ SPI/UART (编码器/HALL)                      │
-   (编码器/HALL)      │                                             │
-                     │   TIM1/TIM8 ── PWM 6ch (互补) ──► 死区插入   │
-                     │        │                                  │
-                     │        ▼                                  │
-                     │   COMP (硬件快速过流)  ──► 关断/告警          │
-                     │        ▲                                  │
-                     │   ADC ── INA240A2 ×3 ── 三相相电流(电流环)    │
-                     │                                             │
-                     │   ADC ── Vbus 分压 ──► 母线电压(软件 OV/UV)   │
-                     │                                             │
-                     │   软件: I_bus = Σ d_x·i_x → 母线电流/功率/    │
-                     │         效率重建 + I²t 热模型 + 故障诊断      │
-                     └──────────────┬──────────────────────────────┘
-                                    │ PWM (高侧/低侧, 互补+死区)
-                                    ▼
-                     ┌───────────────────────────────┐
-                     │  UCC27211 ×3 (半桥栅极驱动)     │
-                     │  HI/LI 输入, 自举高侧驱动       │
-                     └───────────────┬───────────────┘
-                                     │ 栅极串联 Rg
-                                     ▼
-                     ┌───────────────────────────────┐
-                     │  070N10NS ×6 三相逆变桥         │
-                     │  (3 相半桥)                    │
-                     └──────┬────────────────────┬───┘
-                            │  A/B/C 三相输出       ├─► 电机
-                            │  │(每相分流 0.5 mΩ/3 W)
-                            │  ▼
-                            │ INA240A2 ×3 ──► ADC(相电流闭环)
+```bash
+cargo fmt --manifest-path "software/firmware/Cargo.toml" -- --check
+cargo test --manifest-path "software/firmware/Cargo.toml" --lib --target x86_64-pc-windows-msvc
+cargo clippy --manifest-path "software/firmware/Cargo.toml" --lib --target x86_64-pc-windows-msvc -- -D warnings
 ```
 
----
+### Encoder firmware
 
-## 4. 硬件电路设计要点
-
-### 4.1 电源树
-
-> 输入由 12~48 V 直流改为主电池供电(2S~6S LiPo)。三路电源架构:
-
-```
-电池 2S~6S (5.5~25.2V) ──► [反接/OVP 保护] ──► 母线电容 (电解+陶瓷)
-        │
-        └─► SY8303 Buck (4.5~40V / 3A / Fsw 500k~2.5MHz 可调) ──► 5 V 轨
-             │
-             ├─► ME6211C33 LDO ──► 3.3 V ──► MCU 逻辑 / INA240 VS / ADC VDDA
-             └─► TPS61170 Boost (5V→10V / 1.2MHz) ──► VDRV 10 V ──► UCC27211 VDD / 自举
+```bash
+cargo --config "software/firmware/.cargo/config.toml" build \
+  --manifest-path "software/firmware/Cargo.toml" \
+  --target thumbv7em-none-eabihf --release --bin foc-firmware
 ```
 
-- **架构理由(buck→boost 的必要性)**:TPS61170(升压至 10 V)的输入上限仅 **18 V**,若从电池(6S = 25.2 V)直接升压会超限;先经 SY8303 把 5.5~25.2 V 归一化为 5 V,使 boost 输入恒 ≤5 V,避开 18 V 上限,5 V→10 V 也恰为其甜点区。
-- **SY8303(替代 SY8301)**:3 A / 4.5~40 V(覆盖 2S~6S),TSOT23-8,上下管 RDS 110/70 mΩ。开关频率 **500 kHz~2.5 MHz 可调(FS 引脚对地电阻**,Fsw[kHz]≈105/R_fs[kΩ]);取 **~500 kHz** 以降低极轻载下的开关损耗与 EMI(或按电感体积权衡,不必上 2 MHz)。5 V 轨负载 = 逻辑(≈0.1 A)+ TPS61170 输入(栅极平均 ~15 mA,boost 输入 <0.1 A),**3 A 上限余量充足**,未来扩展外部负载无压力。注意封装由 SY8301 的 SOT23-6 变为 TSOT23-8,PCB 布局需同步。
-- **TPS61170**:1.2 A 内部集成开关(min 0.96 A)、1.2 MHz、轻载跳频、软启动;栅极轨只需 ≥8 V(UCC27211 UVLO)、上限 17 V,10 V 设定留裕量。
-- **电池欠压切除(必设)**:SY8303 守住 5 V 需输入 ≥ ~5.2 V,ME6211 保住 3.3 V 需输入 ≥ ~3.5 V。电池/软件 UVLO 端**建议设在 ~6.0 V(2S)及以上**,防止 MCU 在边沿态工作。
-- **母线电容**:需足够容量支撑 PWM 开关电流脉动,电解电容 + 高频陶瓷电容并联。
-- **噪声链**:TPS61170 的 1.2 MHz 纹波会回到 5 V 轨,但 INA240 与 ADC 均挂 ME6211 的 **3.3 V** 上,LDO PSRR 滤除高频;VDRV 为功率侧,栅极驱动处就近 100 nF + 1 µF 去耦即可。
-- **上电时序**:buck 出 5 V → 3.3 V 与 10 V 自然就绪;PWM 仅在 3.3 V(MCU)与 10 V(驱动 VDD UVLO)都就绪后使能。
-- **地平面**:功率地 (PGND) 与 逻辑地/模拟地 (AGND) 单点连接;相电流分流地线独立走回母线负极,避免采样被开关电流污染(PGND 与采样地分离,见 §5)。
+### Hall firmware
 
-### 4.2 栅极驱动与死区
-
-- TIM1/TIM8 输出互补 PWM,配置**死区插入**;死区时间典型 **100 ns ~ 500 ns** `[按 MOS 开关速度调整]`,防止桥臂直通。
-- UCC27211 输入 HI/LI 直接由定时器互补输出驱动;上电期间 MCU 不复位配置时,输入下拉保证 MOS 截止。
-- **上/下电顺序**:先使能栅极供电、再使能 PWM;异常时建议通过 `FOCDriver::disable()` 切断 PWM 并封锁高侧。
-
-### 4.3 保护(见 §6)
-
-- 硬件快速过流 (COMP + 取样电阻 → TIM BRK)
-- 软件过流/过功率/欠压/过压/过温/堵转(替代原 INA226 方案)
-
-### 4.4 外设引脚映射
-
-| Pin | GPIO | 功能 | 外设 | 类型 |
-|---|---|---|---|---|
-| 42 | PA8 | U_H | TIM1_CH1 | PWM |
-| 35 | PB13 | U_L | TIM1_CH1N | PWM |
-| 43 | PA9 | V_H | TIM1_CH2 | PWM |
-| 36 | PB14 | V_L | TIM1_CH2N | PWM |
-| 44 | PA10 | W_H | TIM1_CH3 | PWM |
-| 37 | PB15 | W_L | TIM1_CH3N | PWM |
-| 12 | PA0 | I_A | ADC1_IN1 | 电流(COMP3_INP) |
-| — | PA1 | I_B | ADC2_IN2 | 电流(COMP1_INP) |
-| 24 | PB0 | I_C | ADC3_IN12 | 电流(COMP4_INP) |
-| 14 | PA2 | VBUS | ADC1_IN3 | 母线 |
-| 17 | PA3 | NTC1 | ADC1_IN4 | 温度 |
-| 34 | PB12 | NTC2 / EXT_ADC | ADC4_IN3 | 扩展 |
-| 45 | PA11 | CAN_RX | FDCAN1_RX | CAN |
-| 46 | PA12 | CAN_TX | FDCAN1_TX | CAN |
-| 33 | PB10 | UART_TX | USART3_TX | 调试 |
-| 32 | PB11 | UART_RX | USART3_RX | 调试 |
-| 57 | PB4 | ENC_A | TIM3_CH1 | Encoder |
-| 58 | PB5 | ENC_B | TIM3_CH2 | Encoder |
-| 38 | PC6 | HALL_U | GPIO / TIM3_CH1 | Hall |
-| 39 | PC7 | HALL_V | GPIO / TIM3_CH2 | Hall |
-| 40 | PC8 | HALL_W | GPIO / TIM3_CH3 | Hall |
-| 52 | PC10 | SPI_SCK | SPI3_SCK | 扩展 |
-| 53 | PC11 | SPI_MISO | SPI3_MISO | 扩展 |
-| 54 | PC12 | SPI_MOSI | SPI3_MOSI | 扩展 |
-| 41 | PC9 | ENC_CS | GPIO | 扩展 |
-| 49 | PA13 | SWDIO | SWD | 调试 |
-| 50 | PA14 | SWCLK | SWD | 调试 |
-| — | PA6 | BKIN | TIM1_BKIN | 保护(刹车,外部备用) |
-
-**设计确认与待办(config 约束)**:
-
-- **三相 PWM**:TIM1(CH1/2/3 + CH1N/2N/3N)互补输出,硬件死区;PB0 同时是 TIM1_CH2N 的复用脚,配成模拟输入 I_C 即可,勿再使能为 PWM。
-- **三路相电流分别落在 ADC1/2/3(同时兼作 COMP 比较源)**:采样脚取 **PA0/PA1/PB0**——PA0→ADC1_IN1、PA1→ADC2_IN2、PB0→ADC3_IN12。既满足 §5「三 ADC 注入组由 TIM1 TRGO 同触发」(三相同步采样无相位错),又能三相都进 COMP 做硬件 OCP。~~PC0~~ 原方案(I_B)不能进任何比较器非反相输入,已弃用、PC0 引脚释放。(通道号以数据手册 ADC 映像为准复核)
-- **母线 VBUS(PA2/ADC1_IN3)、NTC1(PA3/ADC1_IN4)** 走 ADC1 常规组,与注入采样错开。
-- **TIM3 二选一(编码器 ↔ Hall,不同时用)**:用编码器时 TIM3=编码器接口(PB4/PB5 计数);用 Hall 时 TIM3=输入捕获(PC6/7/8),CH1~3 判换相区间。同一颗定时器、两种配置按选型编译其一,物理上亦可只装一种传感器连接器。
-- **硬件 OCP(COMP→内部 TIM1 刹车)**:三路 INA240 输出经三颗比较器做快速过流——**PA0→COMP3_INP、PA1→COMP1_INP、PB0→COMP4_INP**(参照 RM0440 表 188),反相端接内部 DAC(阈值 ≈±55 A,软件可调)。三颗 COMP 输出**内部 OR 进 TIM1 刹车(brake)**,路径不出芯片;少数需分流的比较器输出可按 **TIM1_OR** 分配到 BKIN/BKIN2。**PA6(TIM1_BKIN)仅为外部备用刹车输入脚,正常情况下 OCP 走内部路径、用不到它**。若不启用 PA6 外部 BKIN,需关闭该外部 BKIN 使能并给 PA6 外接下拉(或配内部下拉),避免浮空噪声误触发刹车。
-- **NRST**:未使用,不再分配,复位交由 SWD 提供(已删除原所标 PG10/pin7 项)。
-- **引脚号列**:多为按封装视图示意,PA1、PA6 等以 "—" 占位;打板前以所用 G473RC 封装的 footprint 视图 + 数据手册为准复核一遍。
-
----
-
-## 5. 电流采样策略
-
-FOC 电流环需要 **PWM 中心对齐时刻的瞬时相电流**,采样链为「**3 × (0.5 mΩ + INA240A2)**」,母线量由软件重建(§2.4)。
-
-### 相电流(电流环主控)—— INA240A2 ×3 + 0.5 mΩ ×3
-- 每相 0.5 mΩ/3 W 开尔文电阻串在相线上,INA240A2(G = 50 V/V)放大后送 MCU ADC 注入组。
-- 利用 TIM1 **换向重复计数 + ADC 触发**,在 PWM 载波谷/峰(中心对齐)启动转换,避开开关瞬态,采样稳定的相电流;三相同步采样。
-- **宽共模 (-4~80 V)+ PWM 抗误差 + 400 kHz 带宽**满足 20 kHz 电流环;满量程 ±60 A,LSB ≈ 32 mA(详见 §2.5 核算表)。
-- 三相全采:`ia+ib+ic≈0` 残差兼作通道故障诊断;任一通道异常时可降级为两相 + KCL 推算。
-- INA240A2 输出与 ADC 之间加 RC 滤波(100 Ω + 1 nF),差分/短捷布线。
-- **上电零偏校准**:使能 PWM 前采 N 次取均值作为各通道偏置,消除 ±0.25 A 级失调。
-
-### 母线电流/电压/功率 —— 软件重建
-- 母线电流:`I_bus = d_a·i_a + d_b·i_b + d_c·i_c`(每 PWM 周期),滑动平均得直流分量。
-- 母线电压:分压(47 k/6.2 k,0.1%)→ ADC 常规通道,10 kHz 级巡检。
-- 功率/效率:`P_in = Vbus × I_bus_avg`;与 FOC 输出的 `P_out = 3/2·(ud·id + uq·iq)` 对比。
-- 精度约 ±5%,用于遥测/能效评估/二级保护,**不做计量、不做电流环**。
-
-### 采样回路的信号完整性
-- 相分流电阻采用四线制(开尔文)连接,采样走线差分、短捷、远离开关节点 (HS 振铃);采样地与功率地单点汇流。
-- ADC 参考电压用低噪声基准,避免与逻辑电源同源耦合。
-- INA240A2 输出 RC(100 Ω + 1 nF,≈1.6 MHz)只滤开关毛刺,不引入电流环相移。
-
----
-
-## 6. 保护功能设计
-
-| 保护 | 实现 | 响应 |
-|---|---|---|
-| 过流(硬件级,主保护) | STM32G4 **三条 COMP 分别比较 INA240 输出 vs DAC 阈值**(PA0/PA1/PB0 → COMP3/1/4)→ 内部 OR → TIM1 **BRK**(PA6 为外部备用 BKIN) | ns~µs 级硬件关断 PWM,不依赖软件 |
-| 过流(软件级,二级) | 电流环中断内判相电流 \|i\| > ~55 A,连续 N 次计数去抖 | 软件关断 + 故障码 |
-| 母线欠压/过压 | Vbus 分压 → ADC → 软件阈值;**阈值按所配电池节数设定**:欠压 = 每节 ~3.0 V × 节数(2S≈6.0 V),过压 = 每节 ~4.2 V × 节数(6S 满充 25.2 V,含 OVP 余量) | 停止使能/告警 |
-| 过载(热保护) | 软件 **I²t 模型**:按 3·I²·RDS(on) 累计估算结温,超阈值降额/关断 | 慢速,防慢性过载 |
-| 采样链故障 | \|ia+ib+ic\| 残差 > 阈值 → 分流断线/放大器失效/ADC 通道故障 | 立即关断 + 报错 |
-| 桥臂失效 | 有转矩指令但母线电流重建值持续异常(为零/相位矛盾) | 关断 + 报错 |
-| 堵转/传感器丢失 | 转速跟踪(编码器/HALL)与电流环输出矛盾 | 限流或关断 |
-| 过温 | NTC → ADC(建议板上 MOS 附近 1 颗) | 降额/停机 |
-| 直通/死区失效 | 死区插入 + 调试阶段电流钳验证 | 硬件规避 + 测试 |
-
-> 尤其推荐把 **COMP → TIM 刹车** 作为主保护:即使 MCU 主循环或电流环异常,也能在定时器硬件层面快速关断三相 PWM,防止上/下桥直通烧毁器件。G473 的 COMP 非反相端走 INA240 输出采样脚(PA0/PA1/PB0 → COMP3/1/4)、反相端接内部 DAC,阈值(对应 ±55 A 左右)软件可调;三路 COMP 输出内部 OR 进 TIM1 刹车,路径不出芯片,**PA6(TIM1_BKIN)仅为外部备用**(详见 §4.4)。
-> 原 INA226 ALERT 过流/过功率一项由上表软件项取代;硬件路径不受影响。
-
----
-
-## 7. 软件开发框架
-
-仓库已有 `software/FOCTestPrj/`。移植到 G473RC 的固件分层建议:
-
-```
-App/
-  foc.h  foc.cpp          ├─ FOCMotor    : 算法编排 (loopFOC/setVelocity/...)
-  foc_driver.h/.cpp       ├─ FOCDriver   : setPWMDuty / setPhaseVoltage / PWM 频率
-  foc_utils.h/.cpp        ├─ MotorMath   : Clarke/Park/逆变换
-  sensor.h  sensor.cpp    ├─ FOCSensor   : 角度(编码器/HALL)抽象
-  pid.h     pid.cpp       └─ PIDController
-mcu/                      └─ STM32G473RC HAL 工程 (TIM1/8, ADC+OPA+COMP, I2C, UART)
+```bash
+cargo --config "software/firmware/.cargo/config.toml" build \
+  --manifest-path "software/firmware/Cargo.toml" \
+  --target thumbv7em-none-eabihf --release --bin foc-firmware \
+  --no-default-features --features sensor-hall
 ```
 
-Map 到硬件的职责:
+The firmware `.cargo/config.toml` configures `thumbv7em-none-eabihf`, `link.x`, `defmt.x`, and a `probe-rs` runner for `STM32G473RC`. Flashing requires an appropriately connected and authorized debug probe; no flashing is performed by this documentation.
 
-- **FOCDriver** → 封装 TIM1/TIM8 互补 PWM、死区、`enable()/disable()`(含 BRK 状态管理)、`setPhaseVoltage(Ud,Uq,θ)`。
-- **FOCSensor** → 接入编码器/HALL 角度与转速;相电流反馈由 3× INA240A2 → ADC 提供(或经片上运放)。
-- **INA240A2 采集** → 三路 ADC 注入组同步采样,换算相电流(含上电零偏校准),供 Clarke/Park 变换。
-- **BusMonitor(软件,替代 INA226 驱动)** → 相电流 × 占空比重建母线电流,Vbus 分压采样,功率/效率统计,I²t 热模型,残差/堵转等故障诊断,供上层遥测与保护调用。
-- **PIDController** → 电流环、速度环复用。
+## Hardware summary
 
-> 现有 `.ioc` 为 H743,移植 H743→G473RC 时注意外设差异(TIM1/8 存在、ADC/OPA/COMP 数量、时钟树需由 168 MHz 核调整),建议直接基于 HAL 从 `STM32CubeMX` 重新生成外设底座,上层抽象保持不变。
+The main drive design is based on:
 
----
+- STM32G473RC, 170 MHz Cortex-M4F motor-control MCU.
+- Three UCC27211 half-bridge gate drivers.
+- Six 100 V-class N-channel MOSFET positions forming a three-phase bridge.
+- Three INA240A2 bidirectional current-sense amplifiers.
+- Three 0.5 mΩ shunts with Kelvin sensing.
+- A 2S–6S battery-oriented bus design target, approximately 5.5–25.2 V.
+- VBUS divider sensing and a TMP235 analog temperature sensor.
+- USART3, FDCAN1, SWD, encoder, Hall, and expansion interfaces.
 
-## 8. 关键设计风险与待办
+Component ratings, thermal limits, bootstrap sizing, switching loss, and current capability remain engineering targets until the populated board is measured. See the local design note on the developer machine for detailed calculations and open issues; it is intentionally not part of the shared repository.
 
-| 项 | 风险/说明 | 状态 |
-|---|---|---|
-| 070N10NS RDS(on) / 封装 参数 | 已按 7 mΩ(常温)/10 mΩ(热态)核算损耗,需对数据手册复核 | `[复核]` |
-| 相电流量程 | 满量程 ±60 A(VS=3.3 V、REF1→GND/REF2→3.3 V 接法);峰值指标已由 70 A 修正为 60 A | 已定(§2.5) |
-| 相电流分流阻值/额定功率 | 0.5 mΩ / 3 W:60 A 连续 1.8 W(60% 额定),需铺铜散热并核对降额曲线 | 已定 |
-| INA240A2 增益/带宽选型 | A2 = 50 V/V(原文档误写 40)、400 kHz 带宽,核算完毕 | 已定(§2.5) |
-| 母线电流/功率监测 | INA226 已取消,改软件重建(§2.4),精度约 ±5%,不做计量 | 已定 |
-| 软件故障诊断 | 残差/I²t/堵转诊断逻辑需在固件中落地并测试 | `[待办]` |
-| 母线电压检测 | 需新增 47 k/6.2 k 分压 + RC 到 ADC 通道,电池节数可配置以定 UV/OV | `[待办]` |
-| 自举电容/二极管选型 | 0.47~1 µF(≥ Qg × 10 余量)+ 耐压 ≥100 V 快恢复/肖特基 | `[待定]` |
-| 死区时间 | 初值 350~500 ns,依 MOS 开通/关断延迟实测调整 | `[待定]` |
-| 母线电容纹波电流 | 60 A 峰值时电容组 RMS 电流约 20~27 A,需多颗低 ESR 并联核算 | `[待定]` |
-| H743→G473 外设工程迁移 | 需新生成 .ioc + 时钟树调整 | `[待办]` |
-| 电池节数配置 | 2S~6S 可切换;FW 需读取配置(拨码开关 / 空载 Vbus 自动判定)以设 UV/OV 阈值与母线量换算 | `[待办]` |
-| 系统功率能力 | 25.2 V × 50 A ≈ **1.26 kW 峰值**;更高功率受 50 A 导通损耗散热限制 | 已定 |
-| 是否需要隔离 | 电池 ≤25.2 V 低电压,非隔离即可;只需抑制杂散电感尖峰,不必隔离驱动/通信 | 已定 |
-| PCB 主机布局 | 功率环面积、采样走线、散热 | `[进行中]` |
+## Validation status and limitations
 
----
+Software builds and host tests cover the current implementation, but they do not prove safe power-stage operation. Before applying motor power:
 
-## 9. 参考资源
+1. Inspect the assembled board and verify component population, polarity, clearances, grounding, and Kelvin-current paths.
+2. With the power stage unpowered, verify all six PWM waveforms, complementary polarity, idle behavior, MOE shutdown, and measured dead time.
+3. With a low-voltage current-limited supply, verify ADC offsets, current polarity/scaling, VBUS scaling, temperature conversion, rotor direction, and electrical-zero alignment.
+4. Exercise each software protection path with controlled fault injection.
+5. Measure control-loop worst-case execution time against the 10 µs PWM period.
+6. Measure gate-driver, MOSFET, shunt, and board temperatures under progressively increasing load.
+7. Confirm UART and CAN behavior on the intended physical wiring.
 
-- STM32G473RC 数据手册 / 参考手册(RM0440)
-- UCC27211 数据手册 (TI)
-- 070N10NS 数据手册
-- INA240A2 数据手册 (TI, 高带宽 PWM 抗误差电流检测放大器,G = 50 V/V)
-- 仓库软件框架:`software/FOCTestPrj/App/`
-- PCB 工程:`hardware/FOC2.kicad_*`
+The 100 kHz setting is therefore a configured operating target, not a claim that the assembled hardware can run continuously at that rate. If timing, switching loss, EMI, bootstrap refresh, or thermal results are unacceptable, reduce the centralized PWM-frequency configuration and repeat validation.
+
+## License and contribution status
+
+The firmware crate declares `MIT OR Apache-2.0` in its package metadata. A repository-wide license file has not been added. This project is currently an active engineering workspace; changes should be reviewed against the hardware design and validated on the target board before being treated as release-ready.
