@@ -797,6 +797,7 @@ fn valid_pid(config: PidConfig) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parameters::{ParameterId, ParameterValue};
 
     fn raw(
         sequence: u32,
@@ -915,8 +916,10 @@ mod tests {
 
     #[test]
     fn fault_during_calibration_restarts_calibration_on_clear() {
-        let mut config = FocConfig::default();
-        config.calibration_samples = 4;
+        let config = FocConfig {
+            calibration_samples: 4,
+            ..FocConfig::default()
+        };
         let mut controller = FocController::new(config);
         let mut frame = raw_with_ntc(1, 0, 24.0, 930, config);
         frame.overrun = true;
@@ -967,5 +970,81 @@ mod tests {
         let reconstructed =
             duty.a * currents.a + duty.b * currents.b + duty.c * currents.c;
         assert!((reconstructed - 4.4).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn storage_is_unsafe_until_calibration_completes() {
+        let controller = FocController::new(FocConfig::default());
+        assert!(!controller.storage_safe());
+    }
+
+    #[test]
+    fn apply_live_profile_updates_safe_idle_controller() {
+        let (mut controller, _, _) = calibrated_controller();
+        let mut profile = ParameterProfileV1::default();
+        profile
+            .set(ParameterId::CurrentLimit, ParameterValue::F32(40.0))
+            .unwrap();
+        profile
+            .set(ParameterId::CurrentKp, ParameterValue::F32(0.7))
+            .unwrap();
+        assert!(controller.apply_live_profile(profile));
+        assert_eq!(controller.config().current_limit, 40.0);
+        assert_eq!(controller.config().current_pid.kp, 0.7);
+    }
+
+    #[test]
+    fn apply_live_profile_rejects_running_bridge() {
+        let (mut controller, config, sequence) = calibrated_controller();
+        controller.handle_command(Command::Enable(ControlMode::Current));
+        controller.step(
+            raw(sequence + 1, 2_048, 24.0, config),
+            RotorSample {
+                mechanical_angle: 0.0,
+                mechanical_velocity: 0.0,
+                valid: true,
+            },
+        );
+        assert_eq!(
+            controller.state(),
+            MotorState::Running(ControlMode::Current)
+        );
+        let previous = controller.config().current_limit;
+        assert!(!controller.apply_live_profile(ParameterProfileV1::default()));
+        assert_eq!(controller.config().current_limit, previous);
+    }
+
+    #[test]
+    fn apply_live_profile_rejects_invalid_profile_without_changes() {
+        let (mut controller, _, _) = calibrated_controller();
+        let profile = ParameterProfileV1 {
+            current_limit: 60.0,
+            ..ParameterProfileV1::default()
+        };
+        assert!(profile.validate().is_err());
+        let previous = controller.config().current_limit;
+        assert!(!controller.apply_live_profile(profile));
+        assert_eq!(controller.config().current_limit, previous);
+    }
+
+    #[test]
+    fn resynchronize_control_input_accepts_new_sequence() {
+        let config = FocConfig {
+            calibration_samples: 4,
+            ..FocConfig::default()
+        };
+        let mut controller = FocController::new(config);
+        let rotor = RotorSample {
+            mechanical_angle: 0.0,
+            mechanical_velocity: 0.0,
+            valid: true,
+        };
+        controller.step(raw(1, 2_048, 24.0, config), rotor);
+        controller.step(raw(2, 2_048, 24.0, config), rotor);
+        controller.resynchronize_control_input();
+        controller.step(raw(50, 2_048, 24.0, config), rotor);
+        controller.step(raw(51, 2_048, 24.0, config), rotor);
+        assert_eq!(controller.state(), MotorState::Idle);
+        assert_eq!(controller.offsets(), [2_048.0; 3]);
     }
 }

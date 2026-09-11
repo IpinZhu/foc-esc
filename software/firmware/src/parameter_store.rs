@@ -76,10 +76,8 @@ pub struct ParameterStore<B> {
     backend: B,
 }
 
-type SlotScan<E> = Result<
-    (Option<StoredProfile>, Option<StoredProfile>),
-    StoreError<E>,
->;
+type SlotScan<E> =
+    Result<(Option<StoredProfile>, Option<StoredProfile>), StoreError<E>>;
 
 impl<B> ParameterStore<B>
 where
@@ -184,12 +182,7 @@ where
         })
     }
 
-    fn scan(
-        &mut self,
-    ) -> Result<
-        (Option<StoredProfile>, Option<StoredProfile>),
-        StoreError<B::Error>,
-    > {
+    fn scan(&mut self) -> SlotScan<B::Error> {
         let slot_a = self.read_slot(Slot::A)?;
         let slot_b = self.read_slot(Slot::B)?;
         Ok((slot_a, slot_b))
@@ -381,7 +374,7 @@ mod tests {
             offset: u32,
             bytes: &[u8; 8],
         ) -> Result<(), Self::Error> {
-            if offset % 8 != 0 {
+            if !offset.is_multiple_of(8) {
                 return Err(MockError::Unaligned);
             }
             if self.fail_program_at == Some(self.program_count) {

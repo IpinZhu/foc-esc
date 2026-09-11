@@ -940,4 +940,45 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn apply_boot_restores_persisted_values_including_pole_pairs() {
+        let mut profile = ParameterProfileV1::default();
+        profile
+            .set(ParameterId::PolePairs, ParameterValue::U8(7))
+            .unwrap();
+        profile
+            .set(ParameterId::CurrentKi, ParameterValue::F32(15.0))
+            .unwrap();
+
+        let mut config = FocConfig::default();
+        profile.apply_boot(&mut config);
+        assert_eq!(config.pole_pairs, 7);
+        assert_eq!(config.current_pid.ki, 15.0);
+
+        config.pole_pairs = 2;
+        profile.apply_live(&mut config);
+        assert_eq!(config.pole_pairs, 2);
+        assert_eq!(config.current_pid.ki, 15.0);
+    }
+
+    #[test]
+    fn from_config_captures_runtime_config_changes() {
+        let base = FocConfig::default();
+        let config = FocConfig {
+            battery_cells: 3,
+            sensor_direction: -1.0,
+            current_pid: PidConfig {
+                kp: 0.9,
+                ..base.current_pid
+            },
+            ..base
+        };
+        let profile = ParameterProfileV1::from_config(&config, 8_192);
+        assert_eq!(profile.battery_cells, 3);
+        assert_eq!(profile.encoder_cpr, 8_192);
+        assert_eq!(profile.sensor_direction, -1);
+        assert_eq!(profile.current_pid.kp, 0.9);
+        assert_eq!(profile.validate(), Ok(()));
+    }
 }
