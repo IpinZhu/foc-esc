@@ -1,4 +1,5 @@
 use crate::foc_math::{Dq, PhaseCurrents, PhaseDuty};
+use crate::parameters::{ParameterId, ParameterValue};
 use crate::pid::PidConfig;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -92,6 +93,68 @@ pub enum Command {
     SetCurrentPid(PidConfig),
     SetVelocityPid(PidConfig),
     ReportControlOverrun,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ParameterRoute {
+    Uart,
+    Can {
+        transaction: u8,
+        request_id: u16,
+        request_data: [u8; 8],
+    },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ParameterAction {
+    Get(ParameterId),
+    Set(ParameterId, ParameterValue),
+    Status,
+    Save,
+    Load,
+    Defaults,
+    FactoryReset,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ParameterRequest {
+    pub route: ParameterRoute,
+    pub action: ParameterAction,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ParameterStorageStatus {
+    pub persisted_valid: bool,
+    pub source_defaults: bool,
+    pub generation: u32,
+    pub dirty: bool,
+    pub restart_required: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum ParameterResultCode {
+    Success = 0,
+    Unchanged = 1,
+    Busy = 2,
+    Invalid = 3,
+    NoValidRecord = 4,
+    FlashRead = 5,
+    FlashErase = 6,
+    FlashProgram = 7,
+    Verify = 8,
+    Unknown = 9,
+    QueueFull = 10,
+    Conflict = 11,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ParameterResponse {
+    pub route: ParameterRoute,
+    pub action: ParameterAction,
+    pub result: ParameterResultCode,
+    pub value: Option<ParameterValue>,
+    pub storage: ParameterStorageStatus,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

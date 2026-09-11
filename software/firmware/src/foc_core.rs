@@ -6,6 +6,7 @@ use crate::interfaces::{
     Command, ControlMode, ControlOutput, FaultFlags, MotorState, RawAdcFrame,
     RotorSample, Telemetry,
 };
+use crate::parameters::ParameterProfileV1;
 use crate::pid::{PidConfig, PidController};
 
 pub const DEFAULT_PWM_FREQUENCY_HZ: u32 = 100_000;
@@ -206,34 +207,95 @@ impl FocController {
         self.offsets
     }
 
-    pub fn handle_command(&mut self, command: Command) {
+    pub fn config(&self) -> FocConfig {
+        self.config
+    }
+
+    pub fn storage_safe(&self) -> bool {
+        if self.state != MotorState::Idle
+            || !self.calibration_complete
+            || !self.faults.is_empty()
+            || self.junction_temperature >= self.config.shutdown_temperature
+        {
+            return false;
+        }
+        let (_, maximum_voltage) = self.bus_limits();
+        if !self.last_telemetry.bus_voltage.is_finite()
+            || self.last_telemetry.bus_voltage > maximum_voltage
+        {
+            return false;
+        }
+        let currents = self.last_telemetry.currents;
+        currents.a.abs().max(currents.b.abs()).max(currents.c.abs()) < 1.0
+    }
+
+    pub fn apply_live_profile(&mut self, profile: ParameterProfileV1) -> bool {
+        if !self.storage_safe() || profile.validate().is_err() {
+            return false;
+        }
+        let mut config = self.config;
+        profile.apply_live(&mut config);
+        self.current_d_pid.set_config(config.current_pid);
+        self.current_q_pid.set_config(config.current_pid);
+        self.velocity_pid.set_config(config.velocity_pid);
+        self.target_iq = self
+            .target_iq
+            .clamp(-config.current_limit, config.current_limit);
+        self.target_velocity = self
+            .target_velocity
+            .clamp(-config.maximum_velocity, config.maximum_velocity);
+        self.open_loop_velocity = self.open_loop_velocity.clamp(
+            -config.maximum_open_loop_velocity,
+            config.maximum_open_loop_velocity,
+        );
+        self.config = config;
+        self.reset_loops();
+        true
+    }
+
+    pub fn resynchronize_control_input(&mut self) {
+        self.previous_sequence = None;
+    }
+
+    pub fn handle_command(&mut self, command: Command) -> bool {
         match command {
-            | Command::Disable => self.enter_idle(),
-            | Command::ClearFault => {
-                if self.state == MotorState::Fault && self.safe_to_clear() {
-                    self.faults.clear();
-                    self.reset_loops();
-                    if self.calibration_complete {
-                        self.state = MotorState::Idle;
-                    } else {
-                        self.calibrator = OffsetCalibrator::default();
-                        self.offsets = [0.0; 3];
-                        self.state = MotorState::Calibrating;
-                    }
-                }
+            | Command::Disable => {
+                self.enter_idle();
+                true
             },
-            | Command::Enable(mode) => self.try_enable(mode),
+            | Command::ClearFault => {
+                if self.state != MotorState::Fault || !self.safe_to_clear() {
+                    return false;
+                }
+                self.faults.clear();
+                self.reset_loops();
+                if self.calibration_complete {
+                    self.state = MotorState::Idle;
+                } else {
+                    self.calibrator = OffsetCalibrator::default();
+                    self.offsets = [0.0; 3];
+                    self.state = MotorState::Calibrating;
+                }
+                true
+            },
+            | Command::Enable(mode) => {
+                let was_idle = self.state == MotorState::Idle;
+                self.try_enable(mode);
+                was_idle && self.state == MotorState::Running(mode)
+            },
             | Command::SetIq(iq) if iq.is_finite() => {
                 self.target_iq = iq.clamp(
                     -self.config.current_limit,
                     self.config.current_limit,
-                )
+                );
+                true
             },
             | Command::SetVelocity(velocity) if velocity.is_finite() => {
                 self.target_velocity = velocity.clamp(
                     -self.config.maximum_velocity,
                     self.config.maximum_velocity,
-                )
+                );
+                true
             },
             | Command::SetOpenLoop {
                 electrical_velocity,
@@ -244,16 +306,19 @@ impl FocController {
                     self.config.maximum_open_loop_velocity,
                 );
                 self.open_loop_q_voltage = q_voltage;
+                true
             },
             | Command::SetCellCount(cells)
                 if (2..=6).contains(&cells) && !self.bridge_requested() =>
             {
-                self.config.battery_cells = cells
+                self.config.battery_cells = cells;
+                true
             },
             | Command::SetElectricalZero(angle)
                 if angle.is_finite() && !self.bridge_requested() =>
             {
-                self.config.electrical_zero = normalize_angle(angle)
+                self.config.electrical_zero = normalize_angle(angle);
+                true
             },
             | Command::SetCurrentPid(config)
                 if valid_pid(config) && !self.bridge_requested() =>
@@ -261,17 +326,20 @@ impl FocController {
                 self.current_d_pid.set_config(config);
                 self.current_q_pid.set_config(config);
                 self.config.current_pid = config;
+                true
             },
             | Command::SetVelocityPid(config)
                 if valid_pid(config) && !self.bridge_requested() =>
             {
                 self.velocity_pid.set_config(config);
                 self.config.velocity_pid = config;
+                true
             },
             | Command::ReportControlOverrun => {
-                self.trip(FaultFlags::CONTROL_OVERRUN)
+                self.trip(FaultFlags::CONTROL_OVERRUN);
+                true
             },
-            | _ => {},
+            | _ => false,
         }
     }
 
@@ -761,9 +829,11 @@ mod tests {
     }
 
     fn calibrated_controller() -> (FocController, FocConfig, u32) {
-        let mut config = FocConfig::default();
-        config.calibration_samples = 4;
-        config.battery_cells = 6;
+        let config = FocConfig {
+            calibration_samples: 4,
+            battery_cells: 6,
+            ..Default::default()
+        };
         let mut controller = FocController::new(config);
         let rotor = RotorSample {
             mechanical_angle: 0.0,

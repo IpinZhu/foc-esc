@@ -23,7 +23,6 @@ embassy-stm32 = { git = "https://github.com/embassy-rs/embassy", features = [
     "stm32g473rc",
     "time-driver-any",
     "exti",
-    "memory-x",
     "single-bank",
     "unstable-pac",
 ] }

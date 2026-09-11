@@ -11,7 +11,6 @@ use embassy_stm32::adc::{
 use embassy_stm32::can;
 use embassy_stm32::gpio::{OutputType, Pull};
 use embassy_stm32::interrupt::typelevel::{ADC1_2, Interrupt};
-#[cfg(feature = "sensor-hall")]
 use embassy_stm32::pac;
 use embassy_stm32::pac::adc::Adc as AdcRegisters;
 #[cfg(feature = "sensor-hall")]
@@ -130,6 +129,53 @@ impl<'d> Tim1PwmBridge<'d> {
             0.5
         };
         (duty * self.max_duty as f32) as u32
+    }
+
+    pub fn pause_control_sampling(&mut self) {
+        self.disable();
+        self.set_duty(PhaseDuty::DISABLED);
+        self.pwm.set_mms2(Mms2::Reset);
+        pac::TIM1.cr1().modify(|register| register.set_cen(false));
+        ADC1_2::disable();
+        ADC1_2::unpend();
+        ADC_HANDLES.lock(|handles| {
+            let mut handles = handles.borrow_mut();
+            if let Some(handles) = handles.as_mut() {
+                handles.adc1.stop_injected_conversions();
+                handles.adc2.stop_injected_conversions();
+                handles.adc3.stop_injected_conversions();
+                handles.adc1.read_injected_samples(&mut [0; 3]);
+                handles.adc2.read_injected_samples(&mut [0; 1]);
+                handles.adc3.read_injected_samples(&mut [0; 1]);
+            }
+        });
+        ADC_FRAME_SIGNAL.reset();
+        ADC_FRAME_CONSUMED.store(false, Ordering::Release);
+    }
+
+    pub fn resume_control_sampling(&mut self) {
+        self.disable();
+        self.set_duty(PhaseDuty::DISABLED);
+        self.pwm.set_mms2(Mms2::Reset);
+        pac::TIM1.cnt().write(|register| register.set_cnt(0));
+        pac::TIM1.egr().write(|register| register.set_ug(true));
+        ADC_HANDLES.lock(|handles| {
+            let mut handles = handles.borrow_mut();
+            if let Some(handles) = handles.as_mut() {
+                handles.adc1.read_injected_samples(&mut [0; 3]);
+                handles.adc2.read_injected_samples(&mut [0; 1]);
+                handles.adc3.read_injected_samples(&mut [0; 1]);
+                handles.adc1.start_injected_conversions();
+                handles.adc2.start_injected_conversions();
+                handles.adc3.start_injected_conversions();
+            }
+        });
+        ADC_FRAME_SIGNAL.reset();
+        ADC_FRAME_CONSUMED.store(false, Ordering::Release);
+        self.pwm.set_mms2(Mms2::Update);
+        ADC1_2::unpend();
+        unsafe { ADC1_2::enable() };
+        pac::TIM1.cr1().modify(|register| register.set_cen(true));
     }
 }
 
