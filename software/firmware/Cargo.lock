@@ -558,6 +558,7 @@ dependencies = [
  "embassy-sync",
  "embassy-time",
  "embedded-can",
+ "libm",
  "panic-probe",
  "static_cell",
 ]

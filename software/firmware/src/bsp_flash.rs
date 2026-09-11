@@ -4,6 +4,7 @@ use embassy_stm32::flash::{
 };
 use embassy_stm32::peripherals;
 
+use crate::motor_param::MOTOR_SLOT_B_OFFSET;
 use crate::parameter_store::{
     FlashBackend, SLOT_A_OFFSET, SLOT_B_OFFSET, SLOT_SIZE,
 };
@@ -11,8 +12,8 @@ use crate::parameter_store::{
 const _: () = assert!(FLASH_SIZE == 0x0004_0000);
 const _: () = assert!(MAX_ERASE_SIZE == SLOT_SIZE as usize);
 const _: () = assert!(WRITE_SIZE == 8);
+const _: () = assert!(MOTOR_SLOT_B_OFFSET + SLOT_SIZE == SLOT_A_OFFSET);
 const _: () = assert!(SLOT_B_OFFSET + SLOT_SIZE == FLASH_SIZE as u32);
-const _: () = assert!(SLOT_A_OFFSET + SLOT_SIZE == SLOT_B_OFFSET);
 
 pub struct Stm32FlashBackend {
     flash: Flash<'static, Blocking>,

@@ -2,6 +2,8 @@
 use core::fmt::{self, Write};
 
 #[cfg(target_arch = "arm")]
+use crate::autotune::AutoTuneStatus;
+#[cfg(target_arch = "arm")]
 use crate::interfaces::ParameterResultCode;
 use crate::interfaces::{
     Command, ControlMode, MotorState, ParameterAction, ParameterRequest,
@@ -29,6 +31,14 @@ pub enum UartRequest {
     Command(Command),
     Parameter(ParameterAction),
     ParameterShow,
+    AutoTune(AutoTuneAction),
+    Status,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AutoTuneAction {
+    Start,
+    Stop,
     Status,
 }
 
@@ -80,6 +90,15 @@ pub fn parse_uart_request(line: &str) -> Result<UartRequest, ParseError> {
             UartRequest::Command(Command::SetVelocityPid(next_pid(&mut words)?))
         },
         | "param" => parse_parameter_request(&mut words)?,
+        | "autotune" => {
+            let action = match next_word(&mut words)? {
+                | "start" => AutoTuneAction::Start,
+                | "stop" => AutoTuneAction::Stop,
+                | "status" => AutoTuneAction::Status,
+                | _ => return Err(ParseError::InvalidArgument),
+            };
+            UartRequest::AutoTune(action)
+        },
         | "status" => UartRequest::Status,
         | _ => return Err(ParseError::Unknown),
     };
@@ -557,6 +576,29 @@ fn write_parameter_status(
 }
 
 #[cfg(target_arch = "arm")]
+fn format_autotune_status(
+    status: Option<AutoTuneStatus>,
+    output: &mut TextBuffer<256>,
+) -> fmt::Result {
+    match status {
+        | None => output.write_str("at state=unknown error=none\r\n"),
+        | Some(status) => write!(
+            output,
+            "at state={} error={} progress={} bw={:?} rs={:?} ld={:?} flux={:?} attempts={} commissioned={}\r\n",
+            status.state.name(),
+            status.error.name(),
+            status.progress,
+            status.current_bandwidth_hz,
+            status.rs,
+            status.ld,
+            status.flux,
+            status.attempts,
+            status.commissioned as u8,
+        ),
+    }
+}
+
+#[cfg(target_arch = "arm")]
 fn result_name(result: ParameterResultCode) -> &'static str {
     match result {
         | ParameterResultCode::Success => "success",
@@ -607,6 +649,8 @@ mod tasks {
     > = Channel::new();
     static TELEMETRY: Watch<CriticalSectionRawMutex, Telemetry, 2> =
         Watch::new();
+    static AUTOTUNE_STATUS: Watch<CriticalSectionRawMutex, AutoTuneStatus, 4> =
+        Watch::new();
 
     pub fn try_receive_command() -> Option<Command> {
         COMMANDS.try_receive().ok()
@@ -630,6 +674,14 @@ mod tasks {
 
     pub fn publish_telemetry(telemetry: Telemetry) {
         TELEMETRY.sender().send(telemetry);
+    }
+
+    pub fn publish_autotune_status(status: AutoTuneStatus) {
+        AUTOTUNE_STATUS.sender().send(status);
+    }
+
+    pub fn try_get_autotune_status() -> Option<AutoTuneStatus> {
+        AUTOTUNE_STATUS.try_get()
     }
 
     #[embassy_executor::task]
@@ -702,6 +754,34 @@ mod tasks {
                                     let _ = uart.write(output.as_bytes()).await;
                                 }
                             }
+                        },
+                        | Ok(UartRequest::AutoTune(action)) => match action {
+                            | AutoTuneAction::Start => {
+                                COMMANDS.send(Command::AutoTuneStart).await;
+                                let _ = uart
+                                    .write(b"ok autotune-starting\r\n")
+                                    .await;
+                            },
+                            | AutoTuneAction::Stop => {
+                                COMMANDS.send(Command::AutoTuneStop).await;
+                                let _ = uart
+                                    .write(b"ok autotune-stopping\r\n")
+                                    .await;
+                            },
+                            | AutoTuneAction::Status => {
+                                let mut output = TextBuffer::new();
+                                if format_autotune_status(
+                                    try_get_autotune_status(),
+                                    &mut output,
+                                )
+                                .is_ok()
+                                {
+                                    let _ = uart.write(output.as_bytes()).await;
+                                } else {
+                                    let _ =
+                                        uart.write(b"error format\r\n").await;
+                                }
+                            },
                         },
                         | Ok(UartRequest::Status) => {
                             if let Some(telemetry) = TELEMETRY.try_get() {
@@ -805,9 +885,9 @@ mod tasks {
 
 #[cfg(target_arch = "arm")]
 pub use tasks::{
-    can_receive_task, can_telemetry_task, publish_parameter_response,
-    publish_telemetry, try_receive_command, try_receive_parameter_request,
-    uart_task,
+    can_receive_task, can_telemetry_task, publish_autotune_status,
+    publish_parameter_response, publish_telemetry, try_get_autotune_status,
+    try_receive_command, try_receive_parameter_request, uart_task,
 };
 
 #[cfg(test)]
@@ -830,6 +910,30 @@ mod tests {
         assert_eq!(parse_uart_request("status"), Ok(UartRequest::Status));
         assert_eq!(
             parse_uart_request("iq nan"),
+            Err(ParseError::InvalidArgument)
+        );
+    }
+
+    #[test]
+    fn parses_autotune_requests() {
+        assert_eq!(
+            parse_uart_request("autotune start"),
+            Ok(UartRequest::AutoTune(AutoTuneAction::Start))
+        );
+        assert_eq!(
+            parse_uart_request("autotune stop"),
+            Ok(UartRequest::AutoTune(AutoTuneAction::Stop))
+        );
+        assert_eq!(
+            parse_uart_request("autotune status"),
+            Ok(UartRequest::AutoTune(AutoTuneAction::Status))
+        );
+        assert_eq!(
+            parse_uart_request("autotune"),
+            Err(ParseError::MissingArgument)
+        );
+        assert_eq!(
+            parse_uart_request("autotune reboot"),
             Err(ParseError::InvalidArgument)
         );
     }

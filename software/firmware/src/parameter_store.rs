@@ -1,16 +1,63 @@
-use crate::parameters::{
-    PARAMETER_PAYLOAD_SIZE, ParameterError, ParameterProfileV1,
-};
+use crate::parameters::{PARAMETER_PAYLOAD_SIZE, ParameterProfileV1};
 
 pub const SLOT_SIZE: u32 = 4_096;
 pub const SLOT_A_OFFSET: u32 = 0x0003_e000;
 pub const SLOT_B_OFFSET: u32 = 0x0003_f000;
-pub const RECORD_SIZE: usize = 184;
-pub const PRE_COMMIT_SIZE: usize = 176;
+pub const RECORD_HEADER_SIZE: usize = 16;
+pub const COMMIT_MARKER_SIZE: usize = 8;
+/// Largest supported payload; record buffers are sized for this and the
+/// unused tail of smaller payloads stays erased (0xFF).
+pub const MAX_PAYLOAD_SIZE: usize = PARAMETER_PAYLOAD_SIZE;
+pub const PRE_COMMIT_SIZE: usize = RECORD_HEADER_SIZE + MAX_PAYLOAD_SIZE;
+pub const RECORD_SIZE: usize = PRE_COMMIT_SIZE + COMMIT_MARKER_SIZE;
 
-const MAGIC: [u8; 4] = *b"FOCP";
-const SCHEMA_VERSION: u16 = 1;
 const COMMIT_MARKER: [u8; 8] = *b"COMMITV1";
+
+/// A payload type that can be persisted in the dual-slot parameter store.
+///
+/// The store guarantees power-loss safety around any implementor: records
+/// carry a type-specific magic and schema version, are CRC-protected, and
+/// are committed with a marker written as the very last double word.
+/// `PAYLOAD_SIZE` must be a multiple of 8 and must not exceed
+/// `MAX_PAYLOAD_SIZE` so the pre-commit region programs in whole double
+/// words.
+pub trait StoredRecord: Copy + PartialEq {
+    const MAGIC: [u8; 4];
+    const SCHEMA_VERSION: u16;
+    const PAYLOAD_SIZE: usize;
+    type Error;
+
+    fn validate_record(&self) -> Result<(), Self::Error>;
+    /// Writes exactly `PAYLOAD_SIZE` bytes into `payload` and returns
+    /// `PAYLOAD_SIZE`.
+    fn encode_payload_into(&self, payload: &mut [u8]) -> usize;
+    /// Decodes from a slice of exactly `PAYLOAD_SIZE` bytes.
+    fn decode_payload(payload: &[u8]) -> Result<Self, Self::Error>;
+}
+
+impl StoredRecord for ParameterProfileV1 {
+    const MAGIC: [u8; 4] = *b"FOCP";
+    const SCHEMA_VERSION: u16 = 1;
+    const PAYLOAD_SIZE: usize = PARAMETER_PAYLOAD_SIZE;
+    type Error = crate::parameters::ParameterError;
+
+    fn validate_record(&self) -> Result<(), Self::Error> {
+        self.validate()
+    }
+
+    fn encode_payload_into(&self, payload: &mut [u8]) -> usize {
+        payload[..PARAMETER_PAYLOAD_SIZE]
+            .copy_from_slice(&self.encode_payload());
+        PARAMETER_PAYLOAD_SIZE
+    }
+
+    fn decode_payload(payload: &[u8]) -> Result<Self, Self::Error> {
+        let bytes: &[u8; PARAMETER_PAYLOAD_SIZE] = payload
+            .try_into()
+            .map_err(|_| crate::parameters::ParameterError::ReservedBytes)?;
+        Self::decode_payload(bytes)
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Slot {
@@ -19,17 +66,33 @@ pub enum Slot {
 }
 
 impl Slot {
-    pub const fn offset(self) -> u32 {
-        match self {
-            | Self::A => SLOT_A_OFFSET,
-            | Self::B => SLOT_B_OFFSET,
-        }
-    }
-
-    const fn opposite(self) -> Self {
+    pub const fn opposite(self) -> Self {
         match self {
             | Self::A => Self::B,
             | Self::B => Self::A,
+        }
+    }
+}
+
+/// Base offsets of the two alternating slots for one record type.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SlotLayout {
+    pub slot_a: u32,
+    pub slot_b: u32,
+    pub size: u32,
+}
+
+pub const PROFILE_SLOT_LAYOUT: SlotLayout = SlotLayout {
+    slot_a: SLOT_A_OFFSET,
+    slot_b: SLOT_B_OFFSET,
+    size: SLOT_SIZE,
+};
+
+impl SlotLayout {
+    pub const fn offset(&self, slot: Slot) -> u32 {
+        match slot {
+            | Slot::A => self.slot_a,
+            | Slot::B => self.slot_b,
         }
     }
 }
@@ -50,18 +113,44 @@ pub trait FlashBackend {
     ) -> Result<(), Self::Error>;
 }
 
+/// Lets several stores share one flash peripheral through reborrowing:
+/// stores are constructed on demand over `&mut Backend`.
+impl<B: FlashBackend> FlashBackend for &mut B {
+    type Error = B::Error;
+
+    fn read(
+        &mut self,
+        offset: u32,
+        bytes: &mut [u8],
+    ) -> Result<(), Self::Error> {
+        (**self).read(offset, bytes)
+    }
+
+    fn erase_page(&mut self, offset: u32) -> Result<(), Self::Error> {
+        (**self).erase_page(offset)
+    }
+
+    fn program_double_word(
+        &mut self,
+        offset: u32,
+        bytes: &[u8; 8],
+    ) -> Result<(), Self::Error> {
+        (**self).program_double_word(offset, bytes)
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum StoreError<E> {
     Read(E),
     Erase(E),
     Program(E),
     Verify,
-    InvalidProfile(ParameterError),
+    Invalid,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct StoredProfile {
-    pub profile: ParameterProfileV1,
+pub struct StoredProfile<P = ParameterProfileV1> {
+    pub profile: P,
     pub generation: u32,
     pub slot: Slot,
 }
@@ -72,19 +161,30 @@ pub enum SaveOutcome {
     Unchanged { generation: u32, slot: Slot },
 }
 
-pub struct ParameterStore<B> {
+pub struct ParameterStore<B, P = ParameterProfileV1> {
     backend: B,
+    layout: SlotLayout,
+    _record: core::marker::PhantomData<P>,
 }
 
-type SlotScan<E> =
-    Result<(Option<StoredProfile>, Option<StoredProfile>), StoreError<E>>;
+type SlotScan<P, E> =
+    Result<(Option<StoredProfile<P>>, Option<StoredProfile<P>>), StoreError<E>>;
 
-impl<B> ParameterStore<B>
+impl<B, P> ParameterStore<B, P>
 where
     B: FlashBackend,
+    P: StoredRecord,
 {
     pub const fn new(backend: B) -> Self {
-        Self { backend }
+        Self::new_with_layout(backend, PROFILE_SLOT_LAYOUT)
+    }
+
+    pub const fn new_with_layout(backend: B, layout: SlotLayout) -> Self {
+        Self {
+            backend,
+            layout,
+            _record: core::marker::PhantomData,
+        }
     }
 
     pub fn into_inner(self) -> B {
@@ -93,37 +193,40 @@ where
 
     pub fn load_latest(
         &mut self,
-    ) -> Result<Option<StoredProfile>, StoreError<B::Error>> {
+    ) -> Result<Option<StoredProfile<P>>, StoreError<B::Error>> {
         let (slot_a, slot_b) = self.scan()?;
         Ok(select_latest(slot_a, slot_b))
     }
 
     pub fn save(
         &mut self,
-        profile: &ParameterProfileV1,
+        profile: &P,
     ) -> Result<SaveOutcome, StoreError<B::Error>> {
         self.save_inner(profile, false)
     }
 
     pub fn force_save(
         &mut self,
-        profile: &ParameterProfileV1,
+        profile: &P,
     ) -> Result<SaveOutcome, StoreError<B::Error>> {
         self.save_inner(profile, true)
     }
 
     fn save_inner(
         &mut self,
-        profile: &ParameterProfileV1,
+        profile: &P,
         force: bool,
     ) -> Result<SaveOutcome, StoreError<B::Error>> {
-        profile.validate().map_err(StoreError::InvalidProfile)?;
+        if P::PAYLOAD_SIZE > MAX_PAYLOAD_SIZE {
+            return Err(StoreError::Invalid);
+        }
+        profile.validate_record().map_err(|_| StoreError::Invalid)?;
         let latest = self.load_latest()?;
-        let payload = profile.encode_payload();
+        let payload = encode_payload_buffer(profile);
 
         if !force
             && let Some(current) = latest
-            && current.profile.encode_payload() == payload
+            && encode_payload_buffer(&current.profile) == payload
         {
             return Ok(SaveOutcome::Unchanged {
                 generation: current.generation,
@@ -138,12 +241,11 @@ where
             | None => (Slot::A, 1),
         };
         let record = encode_record(profile, generation);
-        let base = target.offset();
+        let base = self.layout.offset(target);
+        let pre_commit = RECORD_HEADER_SIZE + P::PAYLOAD_SIZE;
 
         self.backend.erase_page(base).map_err(StoreError::Erase)?;
-        for (index, chunk) in
-            record[..PRE_COMMIT_SIZE].chunks_exact(8).enumerate()
-        {
+        for (index, chunk) in record[..pre_commit].chunks_exact(8).enumerate() {
             let bytes: &[u8; 8] =
                 chunk.try_into().map_err(|_| StoreError::Verify)?;
             self.backend
@@ -151,25 +253,25 @@ where
                 .map_err(StoreError::Program)?;
         }
 
-        let mut pre_commit = [0u8; PRE_COMMIT_SIZE];
+        let mut pre_commit_read = [0u8; PRE_COMMIT_SIZE];
         self.backend
-            .read(base, &mut pre_commit)
+            .read(base, &mut pre_commit_read)
             .map_err(StoreError::Read)?;
-        if pre_commit != record[..PRE_COMMIT_SIZE]
-            || validate_pre_commit(&pre_commit).is_none()
+        if pre_commit_read[..pre_commit] != record[..pre_commit]
+            || validate_pre_commit::<P>(&pre_commit_read).is_none()
         {
             return Err(StoreError::Verify);
         }
 
         self.backend
-            .program_double_word(base + PRE_COMMIT_SIZE as u32, &COMMIT_MARKER)
+            .program_double_word(base + pre_commit as u32, &COMMIT_MARKER)
             .map_err(StoreError::Program)?;
 
         let mut committed = [0u8; RECORD_SIZE];
         self.backend
             .read(base, &mut committed)
             .map_err(StoreError::Read)?;
-        let Some(decoded) = decode_record(&committed, target) else {
+        let Some(decoded) = decode_record::<P>(&committed, target) else {
             return Err(StoreError::Verify);
         };
         if decoded.generation != generation || decoded.profile != *profile {
@@ -182,7 +284,7 @@ where
         })
     }
 
-    fn scan(&mut self) -> SlotScan<B::Error> {
+    fn scan(&mut self) -> SlotScan<P, B::Error> {
         let slot_a = self.read_slot(Slot::A)?;
         let slot_b = self.read_slot(Slot::B)?;
         Ok((slot_a, slot_b))
@@ -191,19 +293,19 @@ where
     fn read_slot(
         &mut self,
         slot: Slot,
-    ) -> Result<Option<StoredProfile>, StoreError<B::Error>> {
-        let mut record = [0u8; RECORD_SIZE];
+    ) -> Result<Option<StoredProfile<P>>, StoreError<B::Error>> {
+        let mut record = [0xff; RECORD_SIZE];
         self.backend
-            .read(slot.offset(), &mut record)
+            .read(self.layout.offset(slot), &mut record)
             .map_err(StoreError::Read)?;
         Ok(decode_record(&record, slot))
     }
 }
 
-fn select_latest(
-    slot_a: Option<StoredProfile>,
-    slot_b: Option<StoredProfile>,
-) -> Option<StoredProfile> {
+fn select_latest<P: StoredRecord>(
+    slot_a: Option<StoredProfile<P>>,
+    slot_b: Option<StoredProfile<P>>,
+) -> Option<StoredProfile<P>> {
     match (slot_a, slot_b) {
         | (Some(a), Some(b))
             if generation_is_newer(b.generation, a.generation) =>
@@ -221,53 +323,73 @@ fn generation_is_newer(candidate: u32, reference: u32) -> bool {
     (candidate.wrapping_sub(reference) as i32) > 0
 }
 
-fn encode_record(
-    profile: &ParameterProfileV1,
+fn encode_payload_buffer<P: StoredRecord>(
+    profile: &P,
+) -> [u8; MAX_PAYLOAD_SIZE] {
+    let mut buffer = [0u8; MAX_PAYLOAD_SIZE];
+    let written = profile.encode_payload_into(&mut buffer);
+    debug_assert_eq!(written, P::PAYLOAD_SIZE);
+    buffer
+}
+
+fn encode_record<P: StoredRecord>(
+    profile: &P,
     generation: u32,
 ) -> [u8; RECORD_SIZE] {
     let mut record = [0xff; RECORD_SIZE];
-    record[0..4].copy_from_slice(&MAGIC);
-    record[4..6].copy_from_slice(&SCHEMA_VERSION.to_le_bytes());
-    record[6..8]
-        .copy_from_slice(&(PARAMETER_PAYLOAD_SIZE as u16).to_le_bytes());
+    let written =
+        profile.encode_payload_into(&mut record[RECORD_HEADER_SIZE..]);
+    debug_assert_eq!(written, P::PAYLOAD_SIZE);
+    record[0..4].copy_from_slice(&P::MAGIC);
+    record[4..6].copy_from_slice(&P::SCHEMA_VERSION.to_le_bytes());
+    record[6..8].copy_from_slice(&(P::PAYLOAD_SIZE as u16).to_le_bytes());
     record[8..12].copy_from_slice(&generation.to_le_bytes());
-    record[16..PRE_COMMIT_SIZE].copy_from_slice(&profile.encode_payload());
-    let crc = record_crc(&record[..PRE_COMMIT_SIZE]);
+    let crc = record_crc(
+        &record[..12],
+        &record[RECORD_HEADER_SIZE..RECORD_HEADER_SIZE + P::PAYLOAD_SIZE],
+    );
     record[12..16].copy_from_slice(&crc.to_le_bytes());
     record
 }
 
-fn validate_pre_commit(
+fn validate_pre_commit<P: StoredRecord>(
     record: &[u8; PRE_COMMIT_SIZE],
-) -> Option<(ParameterProfileV1, u32)> {
-    if record[0..4] != MAGIC
-        || u16::from_le_bytes(record[4..6].try_into().ok()?) != SCHEMA_VERSION
+) -> Option<(P, u32)> {
+    if record[0..4] != P::MAGIC
+        || u16::from_le_bytes(record[4..6].try_into().ok()?)
+            != P::SCHEMA_VERSION
         || usize::from(u16::from_le_bytes(record[6..8].try_into().ok()?))
-            != PARAMETER_PAYLOAD_SIZE
+            != P::PAYLOAD_SIZE
     {
         return None;
     }
     let expected_crc = u32::from_le_bytes(record[12..16].try_into().ok()?);
-    if expected_crc != record_crc(record) {
+    if expected_crc
+        != record_crc(
+            &record[..12],
+            &record[RECORD_HEADER_SIZE..RECORD_HEADER_SIZE + P::PAYLOAD_SIZE],
+        )
+    {
         return None;
     }
-    let payload: &[u8; PARAMETER_PAYLOAD_SIZE] =
-        record[16..PRE_COMMIT_SIZE].try_into().ok()?;
-    let profile = ParameterProfileV1::decode_payload(payload).ok()?;
+    let payload_slice =
+        &record[RECORD_HEADER_SIZE..RECORD_HEADER_SIZE + P::PAYLOAD_SIZE];
+    let profile = P::decode_payload(payload_slice).ok()?;
     let generation = u32::from_le_bytes(record[8..12].try_into().ok()?);
     Some((profile, generation))
 }
 
-fn decode_record(
+fn decode_record<P: StoredRecord>(
     record: &[u8; RECORD_SIZE],
     slot: Slot,
-) -> Option<StoredProfile> {
-    if record[PRE_COMMIT_SIZE..RECORD_SIZE] != COMMIT_MARKER {
+) -> Option<StoredProfile<P>> {
+    let pre_commit = RECORD_HEADER_SIZE + P::PAYLOAD_SIZE;
+    if record[pre_commit..pre_commit + COMMIT_MARKER_SIZE] != COMMIT_MARKER {
         return None;
     }
-    let pre_commit: &[u8; PRE_COMMIT_SIZE] =
+    let pre_commit_bytes: &[u8; PRE_COMMIT_SIZE] =
         record[..PRE_COMMIT_SIZE].try_into().ok()?;
-    let (profile, generation) = validate_pre_commit(pre_commit)?;
+    let (profile, generation) = validate_pre_commit::<P>(pre_commit_bytes)?;
     Some(StoredProfile {
         profile,
         generation,
@@ -275,9 +397,9 @@ fn decode_record(
     })
 }
 
-fn record_crc(record: &[u8]) -> u32 {
+fn record_crc(head: &[u8], tail: &[u8]) -> u32 {
     let mut crc = 0xffff_ffff;
-    for byte in record[..12].iter().chain(&record[16..]) {
+    for byte in head.iter().chain(tail) {
         crc ^= u32::from(*byte);
         for _ in 0..8 {
             crc = if crc & 1 != 0 {
@@ -291,15 +413,19 @@ fn record_crc(record: &[u8]) -> u32 {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::parameters::{ParameterId, ParameterValue};
 
-    const STORAGE_START: u32 = SLOT_A_OFFSET;
-    const STORAGE_SIZE: usize = (SLOT_SIZE * 2) as usize;
+    /// Covers all four parameter pages at the top of flash so tests can
+    /// exercise multiple record layouts over one backend.
+    pub(crate) const STORAGE_START: u32 = 0x0003_c000;
+    pub(crate) const STORAGE_SIZE: usize = (SLOT_SIZE * 4) as usize;
+    pub(crate) const VALID_ERASE_OFFSETS: [u32; 4] =
+        [0x0003_c000, 0x0003_d000, SLOT_A_OFFSET, SLOT_B_OFFSET];
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    enum MockError {
+    pub(crate) enum MockError {
         OutOfBounds,
         Unaligned,
         NeedsErase,
@@ -307,22 +433,22 @@ mod tests {
     }
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    enum Operation {
+    pub(crate) enum Operation {
         Erase(u32),
         Program(u32),
     }
 
     #[derive(Clone)]
-    struct MockFlash {
-        bytes: Vec<u8>,
-        operations: Vec<Operation>,
-        fail_erase: bool,
-        fail_program_at: Option<usize>,
-        program_count: usize,
+    pub(crate) struct MockFlash {
+        pub(crate) bytes: Vec<u8>,
+        pub(crate) operations: Vec<Operation>,
+        pub(crate) fail_erase: bool,
+        pub(crate) fail_program_at: Option<usize>,
+        pub(crate) program_count: usize,
     }
 
     impl MockFlash {
-        fn erased() -> Self {
+        pub(crate) fn erased() -> Self {
             Self {
                 bytes: vec![0xff; STORAGE_SIZE],
                 operations: Vec::new(),
@@ -332,7 +458,10 @@ mod tests {
             }
         }
 
-        fn index(offset: u32, len: usize) -> Result<usize, MockError> {
+        pub(crate) fn index(
+            offset: u32,
+            len: usize,
+        ) -> Result<usize, MockError> {
             let index = offset
                 .checked_sub(STORAGE_START)
                 .ok_or(MockError::OutOfBounds)?
@@ -357,7 +486,7 @@ mod tests {
         }
 
         fn erase_page(&mut self, offset: u32) -> Result<(), Self::Error> {
-            if !matches!(offset, SLOT_A_OFFSET | SLOT_B_OFFSET) {
+            if !VALID_ERASE_OFFSETS.contains(&offset) {
                 return Err(MockError::Unaligned);
             }
             if self.fail_erase {
@@ -417,7 +546,8 @@ mod tests {
 
     #[test]
     fn erased_flash_has_no_record_and_boot_does_not_write() {
-        let mut store = ParameterStore::new(MockFlash::erased());
+        let mut store: ParameterStore<MockFlash> =
+            ParameterStore::new(MockFlash::erased());
         assert_eq!(store.load_latest(), Ok(None));
         assert!(store.into_inner().operations.is_empty());
     }
@@ -484,7 +614,8 @@ mod tests {
             flash.program_count = 0;
             let mut store = ParameterStore::new(flash);
             assert!(store.save(&changed).is_err());
-            let mut rebooted = ParameterStore::new(store.into_inner());
+            let mut rebooted: ParameterStore<MockFlash> =
+                ParameterStore::new(store.into_inner());
             assert_eq!(
                 rebooted.load_latest().unwrap().unwrap().profile,
                 baseline
@@ -551,7 +682,7 @@ mod tests {
         let b_index = MockFlash::index(SLOT_B_OFFSET, RECORD_SIZE).unwrap();
         flash.bytes[a_index..a_index + RECORD_SIZE].copy_from_slice(&a);
         flash.bytes[b_index..b_index + RECORD_SIZE].copy_from_slice(&b);
-        let mut store = ParameterStore::new(flash);
+        let mut store: ParameterStore<MockFlash> = ParameterStore::new(flash);
         assert_eq!(store.load_latest().unwrap().unwrap().slot, Slot::B);
     }
 }

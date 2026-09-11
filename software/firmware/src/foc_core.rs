@@ -6,6 +6,7 @@ use crate::interfaces::{
     Command, ControlMode, ControlOutput, FaultFlags, MotorState, RawAdcFrame,
     RotorSample, Telemetry,
 };
+use crate::motor_param::MotorParam;
 use crate::parameters::ParameterProfileV1;
 use crate::pid::{PidConfig, PidController};
 
@@ -249,6 +250,38 @@ impl FocController {
             config.maximum_open_loop_velocity,
         );
         self.config = config;
+        self.reset_loops();
+        true
+    }
+
+    /// Applies identified motor parameters (auto-tune result) to the
+    /// current and velocity loops. Requires the same safety conditions as
+    /// profile application. d- and q-axis current gains are applied
+    /// separately; the shared `config.current_pid` keeps the q-axis values
+    /// as the representative set.
+    pub fn apply_motor_param(&mut self, param: &MotorParam) -> bool {
+        if !self.storage_safe() || param.validate().is_err() {
+            return false;
+        }
+        let mut d_config = self.config.current_pid;
+        d_config.kp = param.id_kp;
+        d_config.ki = param.id_ki;
+        let mut q_config = self.config.current_pid;
+        q_config.kp = param.iq_kp;
+        q_config.ki = param.iq_ki;
+        self.current_d_pid.set_config(d_config);
+        self.current_q_pid.set_config(q_config);
+        self.config.current_pid = q_config;
+
+        let mut velocity = self.config.velocity_pid;
+        velocity.kp = param.speed_kp;
+        velocity.ki = param.speed_ki;
+        self.velocity_pid.set_config(velocity);
+        self.config.velocity_pid = velocity;
+
+        self.config.current_limit =
+            param.max_current.min(self.config.over_current_threshold);
+        self.config.pole_pairs = param.pole_pairs.min(u16::from(u8::MAX)) as u8;
         self.reset_loops();
         true
     }

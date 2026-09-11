@@ -92,6 +92,8 @@ pub enum Command {
     SetElectricalZero(f32),
     SetCurrentPid(PidConfig),
     SetVelocityPid(PidConfig),
+    AutoTuneStart,
+    AutoTuneStop,
     ReportControlOverrun,
 }
 

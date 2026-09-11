@@ -18,6 +18,10 @@ mod firmware {
     use embassy_stm32::interrupt::{InterruptExt, Priority};
     use embassy_stm32::usart::{Config as UartConfig, Uart};
     use embassy_time::{Duration, Timer};
+    use foc_firmware::autotune::{
+        AutoTuneConfig, AutoTuneController, AutoTuneState, ControlRequest,
+        FastAction,
+    };
     use foc_firmware::bsp_flash::Stm32FlashBackend;
     #[cfg(all(feature = "sensor-encoder", not(feature = "sensor-hall")))]
     use foc_firmware::bsp_hardware::EncoderSensor;
@@ -28,17 +32,18 @@ mod firmware {
         enable_injected_adc_interrupt, init_injected_adcs, wait_for_adc_frame,
     };
     use foc_firmware::comm_task::{
-        can_receive_task, can_telemetry_task, publish_parameter_response,
-        publish_telemetry, try_receive_command, try_receive_parameter_request,
-        uart_task,
+        can_receive_task, can_telemetry_task, publish_autotune_status,
+        publish_parameter_response, publish_telemetry, try_receive_command,
+        try_receive_parameter_request, uart_task,
     };
     use foc_firmware::foc_core::{FocConfig, FocController};
     use foc_firmware::foc_math::PhaseDuty;
     use foc_firmware::hardware::{PwmBridge, RotorSensor};
     use foc_firmware::interfaces::{
-        Command, ParameterAction, ParameterRequest, ParameterResponse,
-        ParameterResultCode, ParameterRoute,
+        Command, ControlMode, MotorState, ParameterAction, ParameterRequest,
+        ParameterResponse, ParameterResultCode, ParameterRoute, Telemetry,
     };
+    use foc_firmware::motor_param::{MOTOR_SLOT_LAYOUT, MotorParam};
     use foc_firmware::parameter_service::ParameterState;
     use foc_firmware::parameter_store::{
         ParameterStore, SaveOutcome, StoreError,
@@ -51,15 +56,13 @@ mod firmware {
     #[cfg(all(feature = "sensor-hall", not(feature = "sensor-encoder")))]
     type SelectedSensor = HallSensor<'static>;
 
-    type BoardParameterStore = ParameterStore<Stm32FlashBackend>;
-
     fn store_result_code<E>(error: StoreError<E>) -> ParameterResultCode {
         match error {
             | StoreError::Read(_) => ParameterResultCode::FlashRead,
             | StoreError::Erase(_) => ParameterResultCode::FlashErase,
             | StoreError::Program(_) => ParameterResultCode::FlashProgram,
             | StoreError::Verify => ParameterResultCode::Verify,
-            | StoreError::InvalidProfile(_) => ParameterResultCode::Invalid,
+            | StoreError::Invalid => ParameterResultCode::Invalid,
         }
     }
 
@@ -86,7 +89,7 @@ mod firmware {
         request: ParameterRequest,
         pwm: &mut Tim1PwmBridge<'static>,
         controller: &mut FocController,
-        store: &mut BoardParameterStore,
+        flash: &mut Stm32FlashBackend,
         parameters: &mut ParameterState,
     ) -> ParameterResponse {
         let mut result = ParameterResultCode::Success;
@@ -137,6 +140,7 @@ mod firmware {
                 } else {
                     let loaded =
                         with_control_sampling_paused(pwm, controller, || {
+                            let mut store = ParameterStore::new(&mut *flash);
                             store.load_latest()
                         });
                     match loaded {
@@ -164,6 +168,7 @@ mod firmware {
                 } else {
                     let outcome =
                         with_control_sampling_paused(pwm, controller, || {
+                            let mut store = ParameterStore::new(&mut *flash);
                             store.save(&parameters.working())
                         });
                     match outcome {
@@ -189,6 +194,7 @@ mod firmware {
                     let defaults = ParameterProfileV1::default();
                     let outcome =
                         with_control_sampling_paused(pwm, controller, || {
+                            let mut store = ParameterStore::new(&mut *flash);
                             store.force_save(&defaults)
                         });
                     match outcome {
@@ -253,6 +259,102 @@ mod firmware {
         }
     }
 
+    fn apply_autotune_request(
+        controller: &mut FocController,
+        request: ControlRequest,
+        param: &MotorParam,
+    ) {
+        match request {
+            | ControlRequest::DisableAndResync => {
+                controller.handle_command(Command::Disable);
+                controller.resynchronize_control_input();
+            },
+            | ControlRequest::EnableCurrent => {
+                controller
+                    .handle_command(Command::Enable(ControlMode::Current));
+            },
+            | ControlRequest::EnableOpenLoop => {
+                controller
+                    .handle_command(Command::Enable(ControlMode::OpenLoop));
+            },
+            | ControlRequest::SetIq(iq) => {
+                controller.handle_command(Command::SetIq(iq));
+            },
+            | ControlRequest::SetOpenLoop {
+                electrical_velocity,
+                q_voltage,
+            } => {
+                controller.handle_command(Command::SetOpenLoop {
+                    electrical_velocity,
+                    q_voltage,
+                });
+            },
+            | ControlRequest::ApplyMotorParam => {
+                if !controller.apply_motor_param(param) {
+                    warn!("auto-tune parameter application rejected");
+                }
+            },
+        }
+    }
+
+    /// Persists the commissioned motor record and the matching control
+    /// profile with control sampling paused. Returns true when both
+    /// records are stored.
+    fn save_autotune_parameters(
+        pwm: &mut Tim1PwmBridge<'static>,
+        controller: &mut FocController,
+        flash: &mut Stm32FlashBackend,
+        parameters: &mut ParameterState,
+        param: &MotorParam,
+    ) -> bool {
+        if !storage_operation_safe(pwm, controller) {
+            warn!("auto-tune save skipped: controller not safe");
+            return false;
+        }
+        let config = controller.config();
+        with_control_sampling_paused(pwm, controller, || {
+            let previous = parameters.working();
+            let mut profile =
+                ParameterProfileV1::from_config(&config, previous.encoder_cpr);
+            profile.pole_pairs = previous.pole_pairs;
+            let motor_outcome = {
+                let mut store = ParameterStore::new_with_layout(
+                    &mut *flash,
+                    MOTOR_SLOT_LAYOUT,
+                );
+                store.save(param)
+            };
+            let profile_outcome = {
+                let mut store = ParameterStore::new(&mut *flash);
+                store.save(&profile)
+            };
+            match (motor_outcome, profile_outcome) {
+                | (Ok(_), Ok(profile_outcome)) => {
+                    parameters.replace_working(profile);
+                    parameters.saved(profile_outcome);
+                    true
+                },
+                | (Err(error), _) | (_, Err(error)) => {
+                    warn!(
+                        "auto-tune save failed: {}",
+                        store_error_name(&error)
+                    );
+                    false
+                },
+            }
+        })
+    }
+
+    fn store_error_name<E>(error: &StoreError<E>) -> &'static str {
+        match error {
+            | StoreError::Read(_) => "flash-read",
+            | StoreError::Erase(_) => "flash-erase",
+            | StoreError::Program(_) => "flash-program",
+            | StoreError::Verify => "verify",
+            | StoreError::Invalid => "invalid",
+        }
+    }
+
     #[cfg(any(
         all(feature = "sensor-encoder", not(feature = "sensor-hall")),
         all(feature = "sensor-hall", not(feature = "sensor-encoder"))
@@ -262,28 +364,63 @@ mod firmware {
         mut pwm: Tim1PwmBridge<'static>,
         mut sensor: SelectedSensor,
         config: FocConfig,
-        mut store: BoardParameterStore,
+        mut flash: Stm32FlashBackend,
         mut parameters: ParameterState,
+        mut autotune: AutoTuneController,
     ) {
         enable_injected_adc_interrupt();
         let mut controller = FocController::new(config);
         let control_period = 1.0 / config.pwm_frequency_hz as f32;
         let telemetry_divider = (config.pwm_frequency_hz / 1_000).max(1);
+        let autotune_tick_divider = (config.pwm_frequency_hz / 1_000).max(1);
+        let mut autotune_frame_counter: u32 = 0;
         let mut last_can_response: Option<(
             ParameterRequest,
             ParameterResponse,
         )> = None;
+        let mut control_view = Telemetry::default();
 
         pwm.disable();
         loop {
             while let Some(command) = try_receive_command() {
-                let accepted = controller.handle_command(command);
-                synchronize_legacy_parameters(
-                    command,
-                    accepted,
-                    &controller,
-                    &mut parameters,
-                );
+                match command {
+                    | Command::AutoTuneStart => {
+                        if controller.state() == MotorState::Idle
+                            && !pwm.is_enabled()
+                            && !autotune.is_running()
+                        {
+                            let seed = MotorParam::from_foc_config(
+                                &controller.config(),
+                            );
+                            let tune_config = AutoTuneConfig::from_foc_config(
+                                &controller.config(),
+                            );
+                            autotune = AutoTuneController::new(tune_config);
+                            if autotune.start(seed) {
+                                info!("auto-tune started");
+                            } else {
+                                warn!("auto-tune start rejected");
+                            }
+                        } else {
+                            warn!(
+                                "auto-tune start requires an idle, disabled controller"
+                            );
+                        }
+                    },
+                    | Command::AutoTuneStop => {
+                        autotune.stop();
+                        info!("auto-tune stop requested");
+                    },
+                    | _ => {
+                        let accepted = controller.handle_command(command);
+                        synchronize_legacy_parameters(
+                            command,
+                            accepted,
+                            &controller,
+                            &mut parameters,
+                        );
+                    },
+                }
             }
 
             while let Some(request) = try_receive_parameter_request() {
@@ -311,7 +448,7 @@ mod firmware {
                         request,
                         &mut pwm,
                         &mut controller,
-                        &mut store,
+                        &mut flash,
                         &mut parameters,
                     ),
                 };
@@ -339,17 +476,91 @@ mod firmware {
             };
 
             let rotor = sensor.sample(control_period);
-            let output = controller.step(raw, rotor);
-            if output.bridge_enabled {
-                pwm.set_duty(output.duty);
-                pwm.enable();
-            } else {
-                pwm.disable();
-                pwm.set_duty(PhaseDuty::DISABLED);
-            }
 
-            if raw.sequence % telemetry_divider == 0 {
-                publish_telemetry(output.telemetry);
+            if autotune.is_running() {
+                match autotune.fast_step(&raw) {
+                    | FastAction::Inject(duty) => {
+                        pwm.set_duty(duty);
+                        pwm.enable();
+                    },
+                    | FastAction::Off => {
+                        pwm.disable();
+                        pwm.set_duty(PhaseDuty::DISABLED);
+                    },
+                    | FastAction::Delegate => {
+                        let output = controller.step(raw, rotor);
+                        control_view = output.telemetry;
+                        if output.bridge_enabled {
+                            pwm.set_duty(output.duty);
+                            pwm.enable();
+                        } else {
+                            pwm.disable();
+                            pwm.set_duty(PhaseDuty::DISABLED);
+                        }
+                        if raw.sequence % telemetry_divider == 0 {
+                            publish_telemetry(control_view);
+                        }
+                    },
+                }
+
+                autotune_frame_counter += 1;
+                if autotune_frame_counter >= autotune_tick_divider {
+                    autotune_frame_counter = 0;
+                    control_view.state = controller.state();
+                    autotune.task_tick(
+                        control_period * autotune_tick_divider as f32,
+                        Some(&control_view),
+                    );
+                    while let Some(request) = autotune.pop_request() {
+                        apply_autotune_request(
+                            &mut controller,
+                            request,
+                            &autotune.motor_param(),
+                        );
+                    }
+                    if autotune.state() == AutoTuneState::Save
+                        && let Some(param) = autotune.take_save_request()
+                    {
+                        let saved = save_autotune_parameters(
+                            &mut pwm,
+                            &mut controller,
+                            &mut flash,
+                            &mut parameters,
+                            &param,
+                        );
+                        autotune.notify_saved(saved);
+                        if saved {
+                            info!(
+                                "auto-tune complete: rs={:?} ld={:?} flux={:?}",
+                                param.rs, param.ld, param.flux
+                            );
+                        }
+                    }
+                    publish_autotune_status(autotune.status());
+                }
+            } else {
+                // Drain any requests the procedure queued on completion or
+                // abort (final resynchronization) before resuming normal
+                // control.
+                while let Some(request) = autotune.pop_request() {
+                    apply_autotune_request(
+                        &mut controller,
+                        request,
+                        &autotune.motor_param(),
+                    );
+                }
+                let output = controller.step(raw, rotor);
+                if output.bridge_enabled {
+                    pwm.set_duty(output.duty);
+                    pwm.enable();
+                } else {
+                    pwm.disable();
+                    pwm.set_duty(PhaseDuty::DISABLED);
+                }
+
+                if raw.sequence % telemetry_divider == 0 {
+                    publish_telemetry(output.telemetry);
+                }
             }
         }
     }
@@ -378,14 +589,18 @@ mod firmware {
         }
         let p = embassy_stm32::init(config);
 
-        let mut parameter_store =
-            ParameterStore::new(Stm32FlashBackend::new(p.FLASH));
-        let stored_parameters = match parameter_store.load_latest() {
-            | Ok(stored) => stored,
-            | Err(_) => {
-                warn!("parameter Flash read failed; using compiled defaults");
-                None
-            },
+        let mut flash = Stm32FlashBackend::new(p.FLASH);
+        let stored_parameters = {
+            let mut store = ParameterStore::new(&mut flash);
+            match store.load_latest() {
+                | Ok(stored) => stored,
+                | Err(_) => {
+                    warn!(
+                        "parameter Flash read failed; using compiled defaults"
+                    );
+                    None
+                },
+            }
         };
         let working_parameters = stored_parameters
             .map(|stored| stored.profile)
@@ -393,6 +608,35 @@ mod firmware {
         let parameter_state =
             ParameterState::from_boot(working_parameters, stored_parameters);
         let mut foc_config = FocConfig::default();
+
+        // Identified motor parameters form the baseline; the runtime
+        // control profile (applied afterwards) wins on overlapping fields.
+        let motor_stored = {
+            let mut store: ParameterStore<&mut Stm32FlashBackend, MotorParam> =
+                ParameterStore::new_with_layout(&mut flash, MOTOR_SLOT_LAYOUT);
+            match store.load_latest() {
+                | Ok(stored) => stored,
+                | Err(_) => {
+                    warn!("motor parameter Flash read failed");
+                    None
+                },
+            }
+        };
+        match motor_stored {
+            | Some(stored) if stored.profile.is_commissioned() => {
+                if stored.profile.apply_to_config(&mut foc_config) {
+                    info!("commissioned motor parameters applied");
+                } else {
+                    warn!("stored motor parameters invalid; ignored");
+                }
+            },
+            | Some(_) => {
+                warn!("motor record not commissioned; ignored");
+            },
+            | None => {
+                info!("no commissioned motor record; run auto-tune");
+            },
+        }
         working_parameters.apply_boot(&mut foc_config);
 
         interrupt::ADC1_2.set_priority(Priority::P1);
@@ -465,8 +709,9 @@ mod firmware {
                 pwm,
                 sensor,
                 foc_config,
-                parameter_store,
+                flash,
                 parameter_state,
+                AutoTuneController::new(AutoTuneConfig::default()),
             )
             .unwrap(),
         );
