@@ -15,6 +15,7 @@
 - 通过 INA240A2 放大器和 0.5 mΩ 分流电阻进行三相电流反馈。
 - 由定时器触发 ADC，对相电流、VBUS 和 TMP235 温度传感器进行采样。
 - 支持电流 FOC、速度 FOC、开环控制、启动电流偏置校准、SVPWM、遥测和软件故障处理。
+- 带版本和 CRC 的双槽 Flash 参数持久化：上电自动加载，UART `param ...` 命令和 CAN 参数帧可读取、设置、保存或恢复出厂参数。
 - 编译期选择转子传感器：
   - `sensor-encoder`（默认）：TIM3 正交编码器，连接 PB4/PB5。
   - `sensor-hall`：TIM3 Hall 输入捕获，连接 PC6/PC7/PC8。

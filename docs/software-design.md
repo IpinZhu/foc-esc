@@ -4,7 +4,7 @@
 > **适用目录：** `software/firmware`  
 > **目标平台：** STM32G473RC / ARM Cortex-M4F  
 > **软件栈：** Rust 2024、Embassy、`no_std`  
-> **更新日期：** 2026-09-09
+> **更新日期：** 2026-09-11
 
 ## 1. 文档目的
 
@@ -34,7 +34,8 @@
 - 电流偏置校准、Clarke/Park 变换、PID 和 SVPWM；
 - UART 调试控制；
 - Classic CAN 控制与遥测；
-- 软件过流、残差、母线电压、温度、堵转、传感器和控制超时保护。
+- 软件过流、残差、母线电压、温度、堵转、传感器和控制超时保护；
+- 带版本和 CRC 的双槽 Flash 参数持久化，支持通过 UART 和 CAN 读取、设置、保存和恢复参数。
 
 当前状态属于**可上板联调的软件工程版本**，不是经过目标板电气、热、EMI 和故障响应鉴定的生产固件。
 
@@ -52,6 +53,7 @@
 8. 故障发生时锁存故障并立即撤销桥使能请求。
 9. 对命令中的非有限浮点数、错误长度和非法帧进行拒绝处理。
 10. 在本轮实现中仅使用软件保护，并明确记录其能力边界。
+11. 提供带版本和 CRC 的双槽 Flash 参数持久化；Flash 擦写期间暂停电流采样，且仅在桥未使能时执行。
 
 ### 3.2 当前非目标
 
@@ -59,7 +61,6 @@
 
 - COMP → DAC → TIM1 BRK/BKIN 硬件过流链；
 - 位置无传感器估算器；
-- Flash 参数持久化；
 - 自动电机参数辨识；
 - 自动编码器/Hall 方向和电角度零点标定；
 - 弱磁、MTPA、前馈解耦和高级调制策略；
@@ -90,6 +91,7 @@
 | 默认电池串数 | 6S | 可在桥未运行时通过命令改为 2S～6S |
 | 默认电流限制 | 50 A | 控制限制，不代表硬件连续电流能力 |
 | 软件过流阈值 | 55 A | 连续 3 个采样周期后锁存 |
+| 参数存储 | 2 × 4 KB Flash 双槽 | Flash 顶部 `0x0803E000`/`0x0803F000`，CRC32 加提交标记 |
 
 ## 5. 软件总体架构
 
@@ -125,15 +127,19 @@
 
 | 文件 | 职责 |
 |---|---|
-| `src/main.rs` | 编译期传感器互斥检查、RCC 配置、外设初始化、中断优先级和任务启动 |
+| `src/main.rs` | 编译期传感器互斥检查、RCC 配置、外设初始化、中断优先级、参数请求处理和任务启动 |
 | `src/lib.rs` | 导出硬件无关模块，并仅在 ARM 目标导出 BSP |
-| `src/interfaces.rs` | 控制模式、状态、命令、ADC 帧、转子样本、故障位、遥测和控制输出 |
+| `src/interfaces.rs` | 控制模式、状态、命令、ADC 帧、转子样本、故障位、遥测、控制输出和参数协议类型 |
 | `src/hardware.rs` | 定义 `PwmBridge` 和 `RotorSensor` trait |
 | `src/foc_math.rs` | 角度归一化、正余弦近似、Clarke/Park/反 Park、SVPWM |
 | `src/pid.rs` | 固定周期 PID、限幅、抗积分饱和、斜率限制和异常值处理 |
-| `src/foc_core.rs` | 校准、状态机、电流环、速度环、保护、功率/热模型和遥测生成 |
+| `src/foc_core.rs` | 校准、状态机、电流环、速度环、保护、功率/热模型、遥测生成和运行参数热更新 |
+| `src/parameters.rs` | 版本化参数注册表、范围/关系校验、payload 编解码和配置档转换 |
+| `src/parameter_store.rs` | 双槽 Flash 记录格式、CRC32、两阶段提交和 generation 管理 |
+| `src/parameter_service.rs` | 工作档/持久档状态、脏标记和重启需求跟踪 |
+| `src/bsp_flash.rs` | embassy-stm32 阻塞 Flash 后端，仅在 ARM 目标编译 |
 | `src/bsp_hardware.rs` | TIM1、ADC1/2/3、ADC ISR、Encoder QEI、Hall 捕获及 STM32 引脚实现 |
-| `src/comm_task.rs` | UART 解析、CAN 编解码、命令队列、遥测 Watch 及通信任务 |
+| `src/comm_task.rs` | UART 解析、CAN 编解码、命令队列、参数请求队列、参数响应编码及通信任务 |
 
 ### 5.3 架构原则
 
@@ -184,19 +190,21 @@ cargo --config "software/firmware/.cargo/config.toml" build \
 1. 配置 HSI 和 PLL，使 SYSCLK 为 170 MHz。
 2. 为 FDCAN 选择 PLL1Q 内核时钟，为 ADC12/ADC345 选择 SYSCLK。
 3. 初始化 STM32 外设句柄。
-4. 配置中断优先级：
+4. 从 Flash 双槽加载最新参数档；读取失败或无有效记录时回退到编译默认值并输出告警。
+5. 将参数档应用到 `FocConfig`；Encoder CPR 和 Hall 极对数按加载后的参数初始化。
+6. 配置中断优先级：
    - ADC1_2：P1；
    - TIM3：P4；
    - USART、DMA、FDCAN：P6。
-5. 将 PA6 配置为下拉输入占位，但不连接到 TIM1 Break。
-6. 初始化 TIM1 互补 PWM，并保持 MOE 关闭。
-7. 初始化 ADC1、ADC2、ADC3 注入转换资源。
-8. 根据编译特性初始化 Encoder 或 Hall 后端。
-9. 初始化 USART3 和 FDCAN1。
-10. 启动 UART、CAN 接收、CAN 遥测和电机控制任务。
-11. 电机控制任务启用 ADC1_2 中断。
-12. 控制器进入 `Calibrating`，累计默认 1024 个电流零偏样本。
-13. 校准完成后进入 `Idle`，等待有效的使能命令。
+7. 将 PA6 配置为下拉输入占位，但不连接到 TIM1 Break。
+8. 初始化 TIM1 互补 PWM，并保持 MOE 关闭。
+9. 初始化 ADC1、ADC2、ADC3 注入转换资源。
+10. 根据编译特性初始化 Encoder 或 Hall 后端。
+11. 初始化 USART3 和 FDCAN1。
+12. 启动 UART、CAN 接收、CAN 遥测和电机控制任务。
+13. 电机控制任务启用 ADC1_2 中断。
+14. 控制器进入 `Calibrating`，累计默认 1024 个电流零偏样本。
+15. 校准完成后进入 `Idle`，等待有效的使能命令。
 
 在完成校准且满足运行条件前，TIM1 MOE 保持关闭。
 
@@ -643,6 +651,8 @@ ReportControlOverrun
 - 电池串数、电角度零点和 PID 只允许在桥未请求运行时修改；
 - 被拒绝的命令当前不会自动锁存 `INVALID_COMMAND`。
 
+`SetCellCount`、`SetElectricalZero`、`SetCurrentPid` 和 `SetVelocityPid` 被控制器接受后，控制任务会把当前运行配置同步回参数工作档，保证后续 `param save` 写入 Flash 的档与实际运行配置一致。
+
 ## 17. UART 协议
 
 ### 17.1 物理配置
@@ -673,9 +683,19 @@ ReportControlOverrun
 | `zero <rad>` | 设置电角度零点；桥运行时不会生效 |
 | `current-pid <kp> <ki> <kd> <limit> <ramp>` | 设置电流 PID；所有参数必须为有限值 |
 | `velocity-pid <kp> <ki> <kd> <limit> <ramp>` | 设置速度 PID；所有参数必须为有限值 |
+| `param get <name>` | 读取单个参数值 |
+| `param set <name> <value>` | 设置单个参数；仅在桥未使能且存储操作安全时生效 |
+| `param show` | 逐行输出全部 43 个参数 |
+| `param status` | 输出参数存储状态（valid/source/generation/dirty/restart-required） |
+| `param save` | 把当前工作档写入 Flash 双槽 |
+| `param load` | 从 Flash 重新加载最新档 |
+| `param defaults` | 工作档恢复默认值；不写 Flash |
+| `param factory-reset` | 强制把默认档写入 Flash 双槽 |
 | `status` | 输出最新遥测摘要 |
 
 成功接收命令返回 `ok`；解析失败返回 `error`；尚无遥测时返回 `not-ready`。
+
+参数命令成功时按操作返回 `param <name>=<value>` 或 `ok ...` 行；失败时返回 `error <结果名>`，结果名包括 `busy`、`invalid`、`no-valid-record`、`flash-read`、`flash-erase`、`flash-program`、`verify` 等。参数名即 `ParameterId` 的名称，例如 `param set current-kp 0.35`。
 
 超长行会整体丢弃到下一个换行符，并返回 `line-too-long`。被丢弃行的后缀不会被当作新的命令。
 
@@ -712,7 +732,8 @@ UART 状态包含：
 - 扩展 ID；
 - 未知 ID；
 - DLC 与命令定义不完全一致的帧；
-- 包含 NaN 或 Infinity 的浮点命令。
+- 包含 NaN 或 Infinity 的浮点命令；
+- `0x106`/`0x107` 参数帧中保留字节不为 0 的帧。
 
 ### 18.2 命令帧
 
@@ -724,6 +745,10 @@ UART 状态包含：
 | `0x103` | 8 | `f32` 电角速度 + `f32` q 轴电压 |
 | `0x104` | 1 | 电池串数 |
 | `0x105` | 4 | `f32` 电角度零点，单位 rad |
+| `0x106` | 8 | 参数操作：byte0=事务号，byte1=操作（0=Status，1=Save，2=Load，3=Defaults，4=FactoryReset），byte2..7 必须为 0 |
+| `0x107` | 8 | 参数访问：byte0=事务号，byte1=操作（0=Get，1=Set），byte2=参数 ID，byte3=0，byte4..7=值（Get 时必须为 0） |
+
+参数值按类型编码为 4 字节小端：U8/I8 占 byte4，U16 占 byte4..6，F32 占 byte4..8。同一事务号重复发送相同请求会返回缓存结果；同一事务号发送不同请求会被拒绝为 `Conflict`。
 
 ### 18.3 遥测帧
 
@@ -769,6 +794,41 @@ UART 状态包含：
 
 发送代码以 `u16` 字节容器承载有符号速度和温度，接收端必须按 `i16` 解释对应字段。
 
+#### `0x183` 参数操作结果帧
+
+| Byte | 内容 |
+|---:|---|
+| 0 | 事务号 |
+| 1 | 操作码（同 `0x106`） |
+| 2 | 结果码（见下表） |
+| 3 | 存储标志位：bit0=persisted_valid，bit1=dirty，bit2=restart_required，bit3=source_defaults |
+| 4..8 | `u32` generation，小端 |
+
+#### `0x184` 参数访问结果帧
+
+| Byte | 内容 |
+|---:|---|
+| 0 | 事务号 |
+| 1 | 操作码（0=Get，1=Set） |
+| 2 | 参数 ID |
+| 3 | 结果码；bit7 置位表示参数需重启后生效 |
+| 4..8 | 参数值，按类型小端编码（同 `0x107`） |
+
+参数结果码：
+
+| 值 | 名称 | 含义 |
+|---:|---|---|
+| 0 | Success | 成功 |
+| 1 | Unchanged | 内容未变化，未写入 Flash |
+| 2 | Busy | 控制器忙或不满足安全条件 |
+| 3 | Invalid | 参数 ID、类型或取值非法 |
+| 4 | NoValidRecord | Flash 中无有效参数档 |
+| 5..7 | FlashRead/FlashErase/FlashProgram | Flash 读/擦/写失败 |
+| 8 | Verify | 写后校验失败 |
+| 9 | Unknown | 未知参数 |
+| 10 | QueueFull | 请求队列满 |
+| 11 | Conflict | 事务号冲突 |
+
 ## 19. 遥测与诊断
 
 内部 `Telemetry` 包含：
@@ -798,7 +858,29 @@ Pout ≈ 1.5 × (Ud × Id + Uq × Iq)
 
 ## 20. 配置管理
 
-`FocConfig` 当前在启动时以编译进固件的默认值创建。部分参数可以通过 UART/CAN 在 RAM 中修改，但重启后不会保留。
+参数以 `ParameterProfileV1`（schema 版本 1，payload 160 字节）为中心管理，覆盖电池串数、极对数、传感器方向、编码器 CPR、电角度零点、电流/速度 PID、采样比例、保护阈值、热模型和开环限制共 43 项。
+
+### 20.1 Flash 存储格式
+
+| 项目 | 值 |
+|---|---|
+| 存储区 | Flash 顶部双槽 A/B，各 4 KB：`0x0803E000`、`0x0803F000` |
+| 记录大小 | 184 字节，剩余槽空间保持 `0xFF` |
+| 记录头 | `"FOCP"` + schema 版本 `u16` + payload 长度 `u16` + generation `u32` + CRC32 `u32` |
+| payload | 160 字节，从偏移 16 开始 |
+| 提交标记 | 8 字节 `"COMMITV1"`，固定为最后一条写入，位于偏移 176 |
+
+写入流程：erase 目标槽 → 按 8 字节双字写入前 176 字节 → 回读比对 → 最后写入提交标记 → 回读整条记录并解码比对。任何一步失败都会保留另一槽的旧档。启动时扫描两槽，取 CRC 与提交标记均合法且 generation 更新（含 `u32` 回绕）的记录；无有效记录时回退编译默认值，且不自动写入 Flash。
+
+### 20.2 运行行为
+
+- 上电加载最新档并应用到 `FocConfig`；`ParameterState` 跟踪 working/persisted 差异，产生 dirty 和 restart-required 状态。
+- `pole_pairs` 和 `encoder_cpr` 为启动专用参数，修改后需重启生效；其余参数在满足安全条件时即时热更新。
+- 所有 Flash 擦写仅在桥未使能、控制器 `Idle`、无故障、无过流且相电流接近零（`storage_safe`）时执行；执行期间暂停 ADC 采样触发，完成后重新同步序列号。
+- UART/CAN 参数写入受同一范围与关系校验约束，非法值原样拒绝，不进入工作档。
+- 遗留命令 `cells/zero/current-pid/velocity-pid` 被接受后同步进参数工作档，两条路径不会互相覆盖。
+
+`FocConfig` 中的其余编译期常量（PWM 频率、死区、校准样本数、占空比边界等）仍以编译进固件的默认值创建，不参与持久化。
 
 主要配置分组：
 
@@ -816,7 +898,7 @@ Pout ≈ 1.5 × (Ud × Id + Uq × Iq)
 - TMP235 传输函数；
 - 电流和速度 PID。
 
-生产化前应为板级标定参数定义受版本管理、校验和保护的持久化格式。
+生产化前应确认参数默认值与实测标定一致，并保持存储格式随 schema 版本演进时的前后兼容策略。
 
 ## 21. 测试设计与当前结果
 
@@ -835,25 +917,27 @@ Pout ≈ 1.5 × (Ud × Id + Uq × Iq)
 - ADC 丢帧和覆盖故障；
 - 故障锁存、安全清除和重新校准；
 - UART 命令解析；
-- CAN 命令 DLC、浮点值和遥测字节序。
+- CAN 命令 DLC、浮点值和遥测字节序；
+- 参数档编解码、范围/关系校验和 profile↔config 转换；
+- 运行参数热更新的安全拒绝路径（运行中、非法档、校准未完成）；
+- 控制采样重新同步后的序列号恢复；
+- 双槽存储的交替写入、内容不变跳过、掉电中断回退、CRC 损坏回退和 generation 回绕；
+- 参数服务的脏标记、重启需求和加载/保存状态迁移；
+- 参数 UART 请求解析与 CAN 参数帧编解码。
 
-截至 2026-09-09：
+截至 2026-09-11：
 
-- 单元测试：21 项通过；
+- 单元测试：47 项通过；
 - 故障保护集成测试：8 项通过；
 - 故障恢复和诊断集成测试：5 项通过；
-- 总计：34 项通过。
+- 总计：60 项通过。
 
 ### 21.2 当前构建状态
 
-- Encoder ARM release build：通过；
-- Encoder ARM release clippy：通过；
-- Hall ARM release build：通过；
-- Hall ARM release clippy：通过；
+- Encoder ARM release build 和 clippy：通过；
+- Hall ARM release build 和 clippy：通过；
 - 格式检查：通过；
-- README 规定范围的主机 clippy：通过。
-
-更宽泛的 `cargo clippy --lib --tests -- -D warnings` 当前会报告两个仅位于单元测试初始化代码中的 `field_reassign_with_default` 风格警告；这不影响 ARM 固件构建，但应在要求全目标零警告时清理。
+- 全量主机 `cargo clippy --lib --tests -- -D warnings`：零警告。
 
 ### 21.3 推荐验证命令
 
@@ -958,7 +1042,8 @@ cargo --config "software/firmware/.cargo/config.toml" build \
 | Hall 合法静止码 | 某些断线仍有歧义 | 增加硬件信号质量检测或系统级合理性检查 |
 | 默认 PID | 未按实际电机整定 | 按目标电机、电压和负载逐级整定 |
 | 电角度零点 | 无自动标定 | 建立低电流标定流程并保存参数 |
-| 配置不持久化 | 当前仅保存在 RAM | 设计带版本和 CRC 的 Flash 参数区 |
+| 参数持久化 | 已实现双槽 Flash + CRC + 提交标记 | 上板验证擦写时序、掉电恢复和双槽回退路径 |
+| 参数访问无权限控制 | UART/CAN 均可修改并保存参数 | 部署环境确认串口/CAN 访问边界 |
 | 热模型简化 | 未包含完整开关损耗 | 通过热测试和功率测量修正参数 |
 | 100 kHz 热/EMI | 未验证 | 实测开关波形、温度和辐射/传导噪声 |
 | CAN 无节点寻址和版本协商 | 固定全局 ID | 多节点系统前定义节点 ID、协议版本和兼容策略 |
@@ -968,15 +1053,13 @@ cargo --config "software/firmware/.cargo/config.toml" build \
 
 按优先级建议：
 
-1. 清理全量主机 clippy 的两个测试风格警告。
-2. 将 Hall 状态机和插值算法拆分为硬件无关组件，并增加主机单元测试。
-3. 使用 DWT 增加控制循环 WCET 测量和最大值遥测。
-4. 根据目标板 ADC 时序，评估将 VBUS/TMP235 改为低速采样任务。
-5. 设计 Encoder/Hall 的运动合理性和过期数据诊断策略。
-6. 增加参数版本、范围检查、CRC 和 Flash 持久化。
-7. 为 UART/CAN 协议增加正式版本号、单位说明和主机端参考实现。
-8. 增加板级硬件在环测试，覆盖启停、故障、通信和传感器边界。
-9. 只有在明确提出并完成软硬件联合评审后，再实现 COMP/DAC/TIM1 BRK 硬件过流链。
+1. 将 Hall 状态机和插值算法拆分为硬件无关组件，并增加主机单元测试。
+2. 使用 DWT 增加控制循环 WCET 测量和最大值遥测。
+3. 根据目标板 ADC 时序，评估将 VBUS/TMP235 改为低速采样任务。
+4. 设计 Encoder/Hall 的运动合理性和过期数据诊断策略。
+5. 为 UART/CAN 协议增加正式版本号、单位说明和主机端参考实现。
+6. 增加板级硬件在环测试，覆盖启停、故障、通信、参数持久化和传感器边界。
+7. 只有在明确提出并完成软硬件联合评审后，再实现 COMP/DAC/TIM1 BRK 硬件过流链。
 
 ## 25. 完成判据
 
