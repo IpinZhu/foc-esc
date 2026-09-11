@@ -16,6 +16,7 @@
 - 由定时器触发 ADC，对相电流、VBUS 和 TMP235 温度传感器进行采样。
 - 支持电流 FOC、速度 FOC、开环控制、启动电流偏置校准、SVPWM、遥测和软件故障处理。
 - 带版本和 CRC 的双槽 Flash 参数持久化：上电自动加载，UART `param ...` 命令和 CAN 参数帧可读取、设置、保存或恢复出厂参数。
+- 电机参数自整定（Auto-Tune）：`autotune start` 一键完成 Rs/L/磁链辨识、电流环 PI 计算与阶跃验证、开环同步校验和观测器参数配置，结果保存为带 CRC 的电机参数档案，重启后自动应用。
 - 编译期选择转子传感器：
   - `sensor-encoder`（默认）：TIM3 正交编码器，连接 PB4/PB5。
   - `sensor-hall`：TIM3 Hall 输入捕获，连接 PC6/PC7/PC8。

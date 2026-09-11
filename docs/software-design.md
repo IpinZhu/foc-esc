@@ -36,6 +36,7 @@
 - Classic CAN 控制与遥测；
 - 软件过流、残差、母线电压、温度、堵转、传感器和控制超时保护；
 - 带版本和 CRC 的双槽 Flash 参数持久化，支持通过 UART 和 CAN 读取、设置、保存和恢复参数。
+- 电机参数自整定（Auto-Tune）：一键完成 Rs/L/磁链辨识、电流环 PI 计算与阶跃验证、开环运行校验、观测器参数配置，并保存为带 CRC 的电机参数档案。
 
 当前状态属于**可上板联调的软件工程版本**，不是经过目标板电气、热、EMI 和故障响应鉴定的生产固件。
 
@@ -60,8 +61,7 @@
 以下内容有意不属于当前实现：
 
 - COMP → DAC → TIM1 BRK/BKIN 硬件过流链；
-- 位置无传感器估算器；
-- 自动电机参数辨识；
+- 位置无传感器估算器（自整定仅输出观测器参数，观测器本身尚未实现）；
 - 自动编码器/Hall 方向和电角度零点标定；
 - 弱磁、MTPA、前馈解耦和高级调制策略；
 - CANopen、UAVCAN 或其他高层 CAN 协议；
@@ -92,6 +92,7 @@
 | 默认电流限制 | 50 A | 控制限制，不代表硬件连续电流能力 |
 | 软件过流阈值 | 55 A | 连续 3 个采样周期后锁存 |
 | 参数存储 | 2 × 4 KB Flash 双槽 | Flash 顶部 `0x0803E000`/`0x0803F000`，CRC32 加提交标记 |
+| 电机参数档案 | 2 × 4 KB Flash 双槽 | `0x0803C000`/`0x0803D000`，`MTRP` 记录，自整定写入 |
 
 ## 5. 软件总体架构
 
@@ -137,6 +138,9 @@
 | `src/parameters.rs` | 版本化参数注册表、范围/关系校验、payload 编解码和配置档转换 |
 | `src/parameter_store.rs` | 双槽 Flash 记录格式、CRC32、两阶段提交和 generation 管理 |
 | `src/parameter_service.rs` | 工作档/持久档状态、脏标记和重启需求跟踪 |
+| `src/motor_param.rs` | 统一电机参数结构 `MotorParam`、默认值、校验、payload 编解码和配置映射 |
+| `src/autotune.rs` | 自整定状态机：注入采样、状态推进、PI 计算、验证与保存请求 |
+| `src/autotune_measure.rs` | 纯算法：最小二乘拟合、中位数/离群点剔除、阶跃响应指标 |
 | `src/bsp_flash.rs` | embassy-stm32 阻塞 Flash 后端，仅在 ARM 目标编译 |
 | `src/bsp_hardware.rs` | TIM1、ADC1/2/3、ADC ISR、Encoder QEI、Hall 捕获及 STM32 引脚实现 |
 | `src/comm_task.rs` | UART 解析、CAN 编解码、命令队列、参数请求队列、参数响应编码及通信任务 |
@@ -653,6 +657,8 @@ ReportControlOverrun
 
 `SetCellCount`、`SetElectricalZero`、`SetCurrentPid` 和 `SetVelocityPid` 被控制器接受后，控制任务会把当前运行配置同步回参数工作档，保证后续 `param save` 写入 Flash 的档与实际运行配置一致。
 
+`AutoTuneStart` 和 `AutoTuneStop` 由电机控制任务直接处理（不进入 `FocController`）：前者要求控制器处于 `Idle` 且桥未使能，后者在任何状态下立即撤销桥使能并回到 `Idle`。
+
 ## 17. UART 协议
 
 ### 17.1 物理配置
@@ -691,6 +697,9 @@ ReportControlOverrun
 | `param load` | 从 Flash 重新加载最新档 |
 | `param defaults` | 工作档恢复默认值；不写 Flash |
 | `param factory-reset` | 强制把默认档写入 Flash 双槽 |
+| `autotune start` | 启动电机参数自整定；仅当控制器 `Idle` 且桥未使能时接受 |
+| `autotune stop` | 中止自整定并关闭桥 |
+| `autotune status` | 输出自整定状态行（state/error/progress/辨识值） |
 | `status` | 输出最新遥测摘要 |
 
 成功接收命令返回 `ok`；解析失败返回 `error`；尚无遥测时返回 `not-ready`。
@@ -724,6 +733,8 @@ UART 状态包含：
 | 比特率 | 500 kbit/s |
 | 帧格式 | Classic CAN、标准 11-bit ID、数据帧 |
 | 字节序 | 小端 |
+
+自整定目前仅通过 UART 触发，未定义 CAN 帧（多节点部署前需补充节点寻址与事务语义）。
 
 接收路径拒绝：
 
@@ -880,6 +891,15 @@ Pout ≈ 1.5 × (Ud × Id + Uq × Iq)
 - UART/CAN 参数写入受同一范围与关系校验约束，非法值原样拒绝，不进入工作档。
 - 遗留命令 `cells/zero/current-pid/velocity-pid` 被接受后同步进参数工作档，两条路径不会互相覆盖。
 
+### 20.3 电机参数档案（MotorParam）
+
+`MotorParam` 是自整定的产物与下游统一参数来源，包含定子电阻/电感、磁链、极对数、d/q 电流环与速度环 PI 增益、观测器带宽与增益、PLL 增益、HFI 参数、切换速度和电流/电压上限。
+
+- 存储格式：`MTRP` 记录，schema 版本 1，payload 112 字节，含独立 CRC32 与 `valid_flag`；仅在自整定全部验证通过后置为已整定标记，并刷新校验和。
+- 存储位置：Flash 顶部 MOTOR_A/MOTOR_B 双槽（`0x0803C000`/`0x0803D000`），与控制参数档共用同一两阶段提交逻辑（`StoredRecord` trait 泛化的双槽存储）。
+- 启动应用顺序：`FocConfig::default()` → `MotorParam::apply_to_config`（仅当档案存在、已整定且校验通过）→ 控制参数档 `apply_boot`。运行参数档在重叠字段上始终优先，作为运行期微调；电机档案是整定基线。
+- PI 增益域：`pid.rs` 的积分项为 `integral += ki * error * dt`（连续域），因此 `MotorParam` 保存连续域 `Ki`，自整定按 `Kp = L * wc`、`Ki = Rs * wc` 直接写入，无需乘以控制周期。
+
 `FocConfig` 中的其余编译期常量（PWM 频率、死区、校准样本数、占空比边界等）仍以编译进固件的默认值创建，不参与持久化。
 
 主要配置分组：
@@ -923,14 +943,19 @@ Pout ≈ 1.5 × (Ud × Id + Uq × Iq)
 - 控制采样重新同步后的序列号恢复；
 - 双槽存储的交替写入、内容不变跳过、掉电中断回退、CRC 损坏回退和 generation 回绕；
 - 参数服务的脏标记、重启需求和加载/保存状态迁移；
-- 参数 UART 请求解析与 CAN 参数帧编解码。
+- 参数 UART 请求解析与 CAN 参数帧编解码；
+- 电机参数档案编解码、校验和与双槽共存；
+- 自整定纯算法（拟合、剔除、阶跃指标）；
+- 自整定状态机（Rs/L 仿真辨识、PI 公式、验证通过/回退/耗尽、磁链估计、保存流程、保护与超时）；
+- 自整定全流程闭环仿真（dq 电机模型，验证辨识精度与收敛）。
 
-截至 2026-09-11：
+截至 2026-09-12：
 
-- 单元测试：47 项通过；
+- 单元测试：80 项通过；
+- 自整定全流程仿真集成测试：3 项通过；
 - 故障保护集成测试：8 项通过；
 - 故障恢复和诊断集成测试：5 项通过；
-- 总计：60 项通过。
+- 总计：96 项通过。
 
 ### 21.2 当前构建状态
 
@@ -1044,6 +1069,8 @@ cargo --config "software/firmware/.cargo/config.toml" build \
 | 电角度零点 | 无自动标定 | 建立低电流标定流程并保存参数 |
 | 参数持久化 | 已实现双槽 Flash + CRC + 提交标记 | 上板验证擦写时序、掉电恢复和双槽回退路径 |
 | 参数访问无权限控制 | UART/CAN 均可修改并保存参数 | 部署环境确认串口/CAN 访问边界 |
+| 自整定结果未上板验证 | 仿真与主机测试通过 | 低压限流复核电感/磁链辨识与 PI 验证 |
+| 观测器增益约定待定 | 公式写入 MotorParam，观测器未实现 | 观测器模块落地时确认并回归 |
 | 热模型简化 | 未包含完整开关损耗 | 通过热测试和功率测量修正参数 |
 | 100 kHz 热/EMI | 未验证 | 实测开关波形、温度和辐射/传导噪声 |
 | CAN 无节点寻址和版本协商 | 固定全局 ID | 多节点系统前定义节点 ID、协议版本和兼容策略 |
@@ -1061,9 +1088,9 @@ cargo --config "software/firmware/.cargo/config.toml" build \
 6. 增加板级硬件在环测试，覆盖启停、故障、通信、参数持久化和传感器边界。
 7. 只有在明确提出并完成软硬件联合评审后，再实现 COMP/DAC/TIM1 BRK 硬件过流链。
 
-## 25. 完成判据
+## 26. 完成判据
 
-### 25.1 当前软件迭代完成判据
+### 26.1 当前软件迭代完成判据
 
 - Encoder 和 Hall 两种配置均能 release 编译和 clippy；
 - 主机控制与保护测试全部通过；
@@ -1073,7 +1100,7 @@ cargo --config "software/firmware/.cargo/config.toml" build \
 
 当前实现基本满足上述代码层判据。
 
-### 25.2 上板联调完成判据
+### 26.2 上板联调完成判据
 
 - 六路 PWM、死区、空闲和关断行为经示波器确认；
 - ADC 触发、采样时序、比例、噪声和偏置通过验证；
@@ -1085,7 +1112,7 @@ cargo --config "software/firmware/.cargo/config.toml" build \
 
 当前尚无证据表明这些板级判据已经完成。
 
-### 25.3 生产发布完成判据
+### 26.3 生产发布完成判据
 
 除上板联调外，还至少需要：
 
