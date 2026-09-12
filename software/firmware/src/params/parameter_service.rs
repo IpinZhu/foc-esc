@@ -1,6 +1,6 @@
 use crate::interfaces::ParameterStorageStatus;
-use crate::parameter_store::{SaveOutcome, StoredProfile};
-use crate::parameters::{
+use crate::params::parameter_store::{SaveOutcome, StoredProfile};
+use crate::params::parameters::{
     ParameterError, ParameterId, ParameterProfileV1, ParameterValue,
 };
 
@@ -112,7 +112,7 @@ impl ParameterState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parameter_store::Slot;
+    use crate::params::parameter_store::Slot;
 
     #[test]
     fn tracks_dirty_and_restart_state() {

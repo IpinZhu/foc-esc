@@ -1,8 +1,8 @@
 use core::f32::consts::TAU;
 
-use crate::foc_core::FocConfig;
-use crate::foc_math::normalize_angle;
-use crate::pid::PidConfig;
+use crate::control::foc_core::FocConfig;
+use crate::control::foc_math::normalize_angle;
+use crate::control::pid::PidConfig;
 
 pub const DEFAULT_ENCODER_CPR: u16 = 4_096;
 pub const PARAMETER_PAYLOAD_SIZE: usize = 160;

@@ -37,10 +37,10 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use static_cell::StaticCell;
 
-use crate::foc_math::PhaseDuty;
+use crate::bsp::hardware::{PwmBridge, RotorSensor};
+use crate::control::foc_math::PhaseDuty;
 #[cfg(feature = "sensor-hall")]
-use crate::foc_math::normalize_angle;
-use crate::hardware::{PwmBridge, RotorSensor};
+use crate::control::foc_math::normalize_angle;
 use crate::interfaces::{RawAdcFrame, RotorSample};
 
 pub const TIMER_CLOCK_HZ: u32 = 170_000_000;

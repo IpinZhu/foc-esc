@@ -4,8 +4,8 @@ use embassy_stm32::flash::{
 };
 use embassy_stm32::peripherals;
 
-use crate::motor_param::MOTOR_SLOT_B_OFFSET;
-use crate::parameter_store::{
+use crate::params::motor_param::MOTOR_SLOT_B_OFFSET;
+use crate::params::parameter_store::{
     FlashBackend, SLOT_A_OFFSET, SLOT_B_OFFSET, SLOT_SIZE,
 };
 

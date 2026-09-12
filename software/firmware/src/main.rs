@@ -22,33 +22,33 @@ mod firmware {
         AutoTuneConfig, AutoTuneController, AutoTuneState, ControlRequest,
         FastAction,
     };
-    use foc_firmware::bsp_flash::Stm32FlashBackend;
+    use foc_firmware::bsp::flash::Stm32FlashBackend;
+    use foc_firmware::bsp::hardware::{PwmBridge, RotorSensor};
     #[cfg(all(feature = "sensor-encoder", not(feature = "sensor-hall")))]
-    use foc_firmware::bsp_hardware::EncoderSensor;
+    use foc_firmware::bsp::stm32::EncoderSensor;
     #[cfg(all(feature = "sensor-hall", not(feature = "sensor-encoder")))]
-    use foc_firmware::bsp_hardware::HallSensor;
-    use foc_firmware::bsp_hardware::{
+    use foc_firmware::bsp::stm32::HallSensor;
+    use foc_firmware::bsp::stm32::{
         BoardIrqs, InjectedAdcResources, Tim1PwmBridge,
         enable_injected_adc_interrupt, init_injected_adcs, wait_for_adc_frame,
     };
-    use foc_firmware::comm_task::{
+    use foc_firmware::comm::comm_task::{
         can_receive_task, can_telemetry_task, publish_autotune_status,
         publish_parameter_response, publish_telemetry, try_receive_command,
         try_receive_parameter_request, uart_task,
     };
-    use foc_firmware::foc_core::{FocConfig, FocController};
-    use foc_firmware::foc_math::PhaseDuty;
-    use foc_firmware::hardware::{PwmBridge, RotorSensor};
+    use foc_firmware::control::foc_core::{FocConfig, FocController};
+    use foc_firmware::control::foc_math::PhaseDuty;
     use foc_firmware::interfaces::{
         Command, ControlMode, MotorState, ParameterAction, ParameterRequest,
         ParameterResponse, ParameterResultCode, ParameterRoute, Telemetry,
     };
-    use foc_firmware::motor_param::{MOTOR_SLOT_LAYOUT, MotorParam};
-    use foc_firmware::parameter_service::ParameterState;
-    use foc_firmware::parameter_store::{
+    use foc_firmware::params::motor_param::{MOTOR_SLOT_LAYOUT, MotorParam};
+    use foc_firmware::params::parameter_service::ParameterState;
+    use foc_firmware::params::parameter_store::{
         ParameterStore, SaveOutcome, StoreError,
     };
-    use foc_firmware::parameters::ParameterProfileV1;
+    use foc_firmware::params::parameters::ParameterProfileV1;
     use {defmt_rtt as _, panic_probe as _};
 
     #[cfg(all(feature = "sensor-encoder", not(feature = "sensor-hall")))]

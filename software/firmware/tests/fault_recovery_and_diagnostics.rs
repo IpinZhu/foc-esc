@@ -4,11 +4,11 @@ use common::{
     NORMAL_BUS_VOLTAGE, assert_fault, calibrated_controller, enable, rotor,
     step,
 };
-use foc_firmware::comm_task::{
+use foc_firmware::comm::comm_task::{
     CAN_CONTROL_ID, CAN_STATUS_ID, UartRequest, decode_can_command,
     encode_can_status, parse_uart_request,
 };
-use foc_firmware::foc_core::{FocConfig, FocController};
+use foc_firmware::control::foc_core::{FocConfig, FocController};
 use foc_firmware::interfaces::{
     Command, ControlMode, FaultFlags, MotorState, RawAdcFrame, RotorSample,
     Telemetry,
@@ -145,7 +145,7 @@ fn rejected_commands_do_not_claim_an_unimplemented_fault() {
 
     assert_eq!(
         parse_uart_request("enable unknown"),
-        Err(foc_firmware::comm_task::ParseError::InvalidArgument)
+        Err(foc_firmware::comm::comm_task::ParseError::InvalidArgument)
     );
     assert_eq!(decode_can_command(CAN_CONTROL_ID, &[9]), None);
 

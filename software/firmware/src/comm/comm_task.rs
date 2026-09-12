@@ -3,14 +3,14 @@ use core::fmt::{self, Write};
 
 #[cfg(target_arch = "arm")]
 use crate::autotune::AutoTuneStatus;
+use crate::control::pid::PidConfig;
 #[cfg(target_arch = "arm")]
 use crate::interfaces::ParameterResultCode;
 use crate::interfaces::{
     Command, ControlMode, MotorState, ParameterAction, ParameterRequest,
     ParameterResponse, ParameterRoute, ParameterStorageStatus, Telemetry,
 };
-use crate::parameters::{ParameterId, ParameterKind, ParameterValue};
-use crate::pid::PidConfig;
+use crate::params::parameters::{ParameterId, ParameterKind, ParameterValue};
 
 pub const CAN_CONTROL_ID: u16 = 0x100;
 pub const CAN_IQ_TARGET_ID: u16 = 0x101;

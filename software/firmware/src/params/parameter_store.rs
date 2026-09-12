@@ -1,4 +1,4 @@
-use crate::parameters::{PARAMETER_PAYLOAD_SIZE, ParameterProfileV1};
+use crate::params::parameters::{PARAMETER_PAYLOAD_SIZE, ParameterProfileV1};
 
 pub const SLOT_SIZE: u32 = 4_096;
 pub const SLOT_A_OFFSET: u32 = 0x0003_e000;
@@ -39,7 +39,7 @@ impl StoredRecord for ParameterProfileV1 {
     const MAGIC: [u8; 4] = *b"FOCP";
     const SCHEMA_VERSION: u16 = 1;
     const PAYLOAD_SIZE: usize = PARAMETER_PAYLOAD_SIZE;
-    type Error = crate::parameters::ParameterError;
+    type Error = crate::params::parameters::ParameterError;
 
     fn validate_record(&self) -> Result<(), Self::Error> {
         self.validate()
@@ -52,9 +52,10 @@ impl StoredRecord for ParameterProfileV1 {
     }
 
     fn decode_payload(payload: &[u8]) -> Result<Self, Self::Error> {
-        let bytes: &[u8; PARAMETER_PAYLOAD_SIZE] = payload
-            .try_into()
-            .map_err(|_| crate::parameters::ParameterError::ReservedBytes)?;
+        let bytes: &[u8; PARAMETER_PAYLOAD_SIZE] =
+            payload.try_into().map_err(|_| {
+                crate::params::parameters::ParameterError::ReservedBytes
+            })?;
         Self::decode_payload(bytes)
     }
 }
@@ -415,7 +416,7 @@ fn record_crc(head: &[u8], tail: &[u8]) -> u32 {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::parameters::{ParameterId, ParameterValue};
+    use crate::params::parameters::{ParameterId, ParameterValue};
 
     /// Covers all four parameter pages at the top of flash so tests can
     /// exercise multiple record layouts over one backend.

@@ -1,9 +1,9 @@
-use foc_firmware::foc_core::{FocConfig, FocController};
+use foc_firmware::control::foc_core::{FocConfig, FocController};
+use foc_firmware::control::pid::PidConfig;
 use foc_firmware::interfaces::{
     Command, ControlMode, ControlOutput, FaultFlags, MotorState, RawAdcFrame,
     RotorSample,
 };
-use foc_firmware::pid::PidConfig;
 
 pub const NORMAL_BUS_VOLTAGE: f32 = 7.0;
 

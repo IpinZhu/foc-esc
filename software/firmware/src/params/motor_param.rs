@@ -1,5 +1,5 @@
-use crate::foc_core::FocConfig;
-use crate::parameter_store::{SlotLayout, StoredRecord};
+use crate::control::foc_core::FocConfig;
+use crate::params::parameter_store::{SlotLayout, StoredRecord};
 
 /// Dual-slot flash layout for the motor commissioning record, located
 /// directly below the control-parameter slots.
@@ -8,7 +8,7 @@ pub const MOTOR_SLOT_B_OFFSET: u32 = 0x0003_d000;
 pub const MOTOR_SLOT_LAYOUT: SlotLayout = SlotLayout {
     slot_a: MOTOR_SLOT_A_OFFSET,
     slot_b: MOTOR_SLOT_B_OFFSET,
-    size: crate::parameter_store::SLOT_SIZE,
+    size: crate::params::parameter_store::SLOT_SIZE,
 };
 
 /// Marks a commissioning record that completed identification and passed
@@ -313,7 +313,7 @@ fn payload_checksum(data: &[u8; MOTOR_PARAM_PAYLOAD_SIZE]) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parameter_store::{
+    use crate::params::parameter_store::{
         SaveOutcome, Slot, StoreError, tests::MockFlash,
     };
 
@@ -401,17 +401,17 @@ mod tests {
     #[test]
     fn motor_record_and_profile_record_coexist_in_flash() {
         let flash = MockFlash::erased();
-        let mut motor_store: crate::parameter_store::ParameterStore<
+        let mut motor_store: crate::params::parameter_store::ParameterStore<
             MockFlash,
             MotorParam,
-        > = crate::parameter_store::ParameterStore::new_with_layout(
+        > = crate::params::parameter_store::ParameterStore::new_with_layout(
             flash.clone(),
             MOTOR_SLOT_LAYOUT,
         );
-        let mut profile_store: crate::parameter_store::ParameterStore<
+        let mut profile_store: crate::params::parameter_store::ParameterStore<
             MockFlash,
-            crate::parameters::ParameterProfileV1,
-        > = crate::parameter_store::ParameterStore::new(flash.clone());
+            crate::params::parameters::ParameterProfileV1,
+        > = crate::params::parameter_store::ParameterStore::new(flash.clone());
 
         let mut motor = MotorParam {
             rs: 0.021,
@@ -427,7 +427,7 @@ mod tests {
         );
         assert_eq!(
             profile_store
-                .save(&crate::parameters::ParameterProfileV1::default()),
+                .save(&crate::params::parameters::ParameterProfileV1::default()),
             Ok(SaveOutcome::Saved {
                 generation: 1,
                 slot: Slot::A,
@@ -437,7 +437,7 @@ mod tests {
         assert_eq!(motor_store.load_latest().unwrap().unwrap().profile, motor);
         assert_eq!(
             profile_store.load_latest().unwrap().unwrap().profile,
-            crate::parameters::ParameterProfileV1::default()
+            crate::params::parameters::ParameterProfileV1::default()
         );
 
         motor.rs = 0.022;
@@ -458,10 +458,10 @@ mod tests {
             rs: 0.0,
             ..MotorParam::default()
         };
-        let mut store: crate::parameter_store::ParameterStore<
+        let mut store: crate::params::parameter_store::ParameterStore<
             MockFlash,
             MotorParam,
-        > = crate::parameter_store::ParameterStore::new_with_layout(
+        > = crate::params::parameter_store::ParameterStore::new_with_layout(
             MockFlash::erased(),
             MOTOR_SLOT_LAYOUT,
         );

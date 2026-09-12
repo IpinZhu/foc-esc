@@ -1,14 +1,14 @@
-use crate::foc_math::{
+use crate::control::foc_math::{
     Dq, PhaseCurrents, PhaseDuty, clarke, inverse_park, normalize_angle, park,
     svpwm,
 };
+use crate::control::pid::{PidConfig, PidController};
 use crate::interfaces::{
     Command, ControlMode, ControlOutput, FaultFlags, MotorState, RawAdcFrame,
     RotorSample, Telemetry,
 };
-use crate::motor_param::MotorParam;
-use crate::parameters::ParameterProfileV1;
-use crate::pid::{PidConfig, PidController};
+use crate::params::motor_param::MotorParam;
+use crate::params::parameters::ParameterProfileV1;
 
 pub const DEFAULT_PWM_FREQUENCY_HZ: u32 = 100_000;
 pub const DEFAULT_DEAD_TIME_NS: u32 = 200;
@@ -830,7 +830,7 @@ fn valid_pid(config: PidConfig) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parameters::{ParameterId, ParameterValue};
+    use crate::params::parameters::{ParameterId, ParameterValue};
 
     fn raw(
         sequence: u32,

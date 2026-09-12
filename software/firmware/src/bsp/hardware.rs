@@ -1,4 +1,4 @@
-use crate::foc_math::PhaseDuty;
+use crate::control::foc_math::PhaseDuty;
 use crate::interfaces::RotorSample;
 
 pub trait PwmBridge {

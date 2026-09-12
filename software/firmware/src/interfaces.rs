@@ -1,6 +1,6 @@
-use crate::foc_math::{Dq, PhaseCurrents, PhaseDuty};
-use crate::parameters::{ParameterId, ParameterValue};
-use crate::pid::PidConfig;
+use crate::control::foc_math::{Dq, PhaseCurrents, PhaseDuty};
+use crate::control::pid::PidConfig;
+use crate::params::parameters::{ParameterId, ParameterValue};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ControlMode {

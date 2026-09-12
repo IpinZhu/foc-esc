@@ -10,14 +10,14 @@ use foc_firmware::autotune::{
     AutoTuneConfig, AutoTuneController, AutoTuneState, ControlRequest,
     FastAction,
 };
-use foc_firmware::foc_core::{FocConfig, FocController};
-use foc_firmware::foc_math::{
+use foc_firmware::control::foc_core::{FocConfig, FocController};
+use foc_firmware::control::foc_math::{
     AlphaBeta, Dq, SQRT_3_OVER_2, inverse_park, normalize_angle, park,
 };
 use foc_firmware::interfaces::{
     Command, ControlMode, MotorState, RawAdcFrame, RotorSample, Telemetry,
 };
-use foc_firmware::motor_param::MotorParam;
+use foc_firmware::params::motor_param::MotorParam;
 
 const FREQ: f32 = 100_000.0;
 const DT: f32 = 1.0 / FREQ;
@@ -114,7 +114,7 @@ impl Sim {
 
     fn reconstruct_alpha(
         &self,
-        duty: &foc_firmware::foc_math::PhaseDuty,
+        duty: &foc_firmware::control::foc_math::PhaseDuty,
     ) -> f32 {
         let va = (duty.a - 0.5) * BUS;
         let vb = (duty.b - 0.5) * BUS;

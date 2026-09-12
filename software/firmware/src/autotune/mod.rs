@@ -9,21 +9,25 @@
 //! immediately requests the bridge off.
 //!
 //! During verification states the procedure delegates PWM generation to
-//! the regular [`crate::foc_core::FocController`] (via [`FastAction::Delegate`])
+//! the regular [`crate::control::foc_core::FocController`] (via [`FastAction::Delegate`])
 //! and drives it through [`ControlRequest`]s, acting as a test conductor.
 //! Protection during delegated frames is provided by the controller; during
 //! injection frames this module enforces over-current, residual, and bus
 //! voltage limits per sample.
 
-use crate::autotune_measure::{
+pub mod measure;
+
+use crate::autotune::measure::{
     StepLimits, StepMetrics, analyze_rejected_median, fit_rs, linear_fit,
 };
-use crate::foc_core::FocConfig;
-use crate::foc_math::{AlphaBeta, PhaseCurrents, PhaseDuty, clarke, svpwm};
+use crate::control::foc_core::FocConfig;
+use crate::control::foc_math::{
+    AlphaBeta, PhaseCurrents, PhaseDuty, clarke, svpwm,
+};
 use crate::interfaces::{
     ControlMode, FaultFlags, MotorState, RawAdcFrame, Telemetry,
 };
-use crate::motor_param::MotorParam;
+use crate::params::motor_param::MotorParam;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
@@ -1402,7 +1406,7 @@ impl AutoTuneController {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::foc_math::Dq;
+    use crate::control::foc_math::Dq;
 
     const FREQ: f32 = 100_000.0;
 

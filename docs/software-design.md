@@ -96,32 +96,33 @@
 
 ## 5. 软件总体架构
 
-### 5.1 分层
+### 5.1 目录结构
+
+源码按功能分块组织：
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│                        src/main.rs                           │
-│ 时钟、引脚、外设初始化、编译期特性检查、Embassy 任务启动    │
-└──────────────────────────────┬───────────────────────────────┘
-                               │
-       ┌───────────────────────┼────────────────────────┐
-       │                       │                        │
-       ▼                       ▼                        ▼
-┌───────────────┐      ┌────────────────┐      ┌────────────────┐
-│bsp_hardware.rs│      │  comm_task.rs  │      │  foc_core.rs   │
-│PWM/ADC/传感器 │      │UART/CAN/通道   │      │状态机/控制/保护│
-└───────┬───────┘      └────────┬───────┘      └────────┬───────┘
-        │                       │                       │
-        │                ┌──────▼──────┐       ┌────────▼────────┐
-        │                │interfaces.rs│       │foc_math.rs/pid.rs│
-        │                │数据与命令类型│       │变换/SVPWM/PID   │
-        │                └─────────────┘       └─────────────────┘
-        │
-        ▼
-┌────────────────┐
-│  hardware.rs   │
-│PWM/传感器 trait│
-└────────────────┘
+src/
+├── main.rs            固件入口：时钟、引脚、外设初始化、任务启动、参数请求处理
+├── lib.rs             crate 根：按功能块导出模块
+├── interfaces.rs      跨模块共享类型：命令、状态、ADC 帧、遥测、协议类型
+├── control/           控制核心（硬件无关，可在主机测试）
+│   ├── foc_core.rs        校准、状态机、电流/速度环、保护、热模型
+│   ├── foc_math.rs        Clarke/Park、SVPWM、角度处理
+│   └── pid.rs             固定周期 PID
+├── comm/              通信路径
+│   └── comm_task.rs       UART 行协议、CAN 编解码、命令/遥测通道
+├── params/            参数系统
+│   ├── parameters.rs       运行参数注册表（ParameterProfileV1）
+│   ├── parameter_store.rs  双槽 Flash 存储（CRC32 + 两阶段提交）
+│   ├── parameter_service.rs 启动/保存状态跟踪
+│   └── motor_param.rs      电机参数档案（MotorParam）
+├── autotune/          电机参数自整定
+│   ├── mod.rs              状态机、注入采样、PI 计算、验证
+│   └── measure.rs          纯算法：拟合、离群点剔除、阶跃指标
+└── bsp/               板级支持
+    ├── hardware.rs         PwmBridge/RotorSensor trait（全目标）
+    ├── stm32.rs            TIM1/ADC/编码器/Hall 实现（仅 ARM）
+    └── flash.rs            阻塞 Flash 后端（仅 ARM）
 ```
 
 ### 5.2 模块职责
@@ -129,21 +130,21 @@
 | 文件 | 职责 |
 |---|---|
 | `src/main.rs` | 编译期传感器互斥检查、RCC 配置、外设初始化、中断优先级、参数请求处理和任务启动 |
-| `src/lib.rs` | 导出硬件无关模块，并仅在 ARM 目标导出 BSP |
+| `src/lib.rs` | 按功能块导出模块：`control`、`comm`、`params`、`autotune`、`bsp` |
 | `src/interfaces.rs` | 控制模式、状态、命令、ADC 帧、转子样本、故障位、遥测、控制输出和参数协议类型 |
-| `src/hardware.rs` | 定义 `PwmBridge` 和 `RotorSensor` trait |
-| `src/foc_math.rs` | 角度归一化、正余弦近似、Clarke/Park/反 Park、SVPWM |
-| `src/pid.rs` | 固定周期 PID、限幅、抗积分饱和、斜率限制和异常值处理 |
-| `src/foc_core.rs` | 校准、状态机、电流环、速度环、保护、功率/热模型、遥测生成和运行参数热更新 |
-| `src/parameters.rs` | 版本化参数注册表、范围/关系校验、payload 编解码和配置档转换 |
-| `src/parameter_store.rs` | 双槽 Flash 记录格式、CRC32、两阶段提交和 generation 管理 |
-| `src/parameter_service.rs` | 工作档/持久档状态、脏标记和重启需求跟踪 |
-| `src/motor_param.rs` | 统一电机参数结构 `MotorParam`、默认值、校验、payload 编解码和配置映射 |
-| `src/autotune.rs` | 自整定状态机：注入采样、状态推进、PI 计算、验证与保存请求 |
-| `src/autotune_measure.rs` | 纯算法：最小二乘拟合、中位数/离群点剔除、阶跃响应指标 |
-| `src/bsp_flash.rs` | embassy-stm32 阻塞 Flash 后端，仅在 ARM 目标编译 |
-| `src/bsp_hardware.rs` | TIM1、ADC1/2/3、ADC ISR、Encoder QEI、Hall 捕获及 STM32 引脚实现 |
-| `src/comm_task.rs` | UART 解析、CAN 编解码、命令队列、参数请求队列、参数响应编码及通信任务 |
+| `src/bsp/hardware.rs` | 定义 `PwmBridge` 和 `RotorSensor` trait |
+| `src/control/foc_math.rs` | 角度归一化、正余弦近似、Clarke/Park/反 Park、SVPWM |
+| `src/control/pid.rs` | 固定周期 PID、限幅、抗积分饱和、斜率限制和异常值处理 |
+| `src/control/foc_core.rs` | 校准、状态机、电流环、速度环、保护、功率/热模型、遥测生成和运行参数热更新 |
+| `src/params/parameters.rs` | 版本化参数注册表、范围/关系校验、payload 编解码和配置档转换 |
+| `src/params/parameter_store.rs` | 双槽 Flash 记录格式、CRC32、两阶段提交和 generation 管理 |
+| `src/params/parameter_service.rs` | 工作档/持久档状态、脏标记和重启需求跟踪 |
+| `src/params/motor_param.rs` | 统一电机参数结构 `MotorParam`、默认值、校验、payload 编解码和配置映射 |
+| `src/autotune/mod.rs` | 自整定状态机：注入采样、状态推进、PI 计算、验证与保存请求 |
+| `src/autotune/measure.rs` | 纯算法：最小二乘拟合、中位数/离群点剔除、阶跃响应指标 |
+| `src/bsp/flash.rs` | embassy-stm32 阻塞 Flash 后端，仅在 ARM 目标编译 |
+| `src/bsp/stm32.rs` | TIM1、ADC1/2/3、ADC ISR、Encoder QEI、Hall 捕获及 STM32 引脚实现 |
+| `src/comm/comm_task.rs` | UART 解析、CAN 编解码、命令队列、参数请求队列、参数响应编码及通信任务 |
 
 ### 5.3 架构原则
 
