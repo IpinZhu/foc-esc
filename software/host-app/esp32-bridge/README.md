@@ -66,9 +66,11 @@ Arduino IDE 等价设置（JTAG 型）：开发板 `ESP32C3 Dev Module`，`USB M
 
 三步定位法：
 
-1. **flash blink 变体并拔掉所有串口终端**：`pio run -t upload -e esp32c3_blink`，
-   重新插拔 USB 后只看板载 LED（不打开任何串口工具）。LED 稳定 1 Hz 闪烁 =>
-   芯片稳定，刷屏是工具触发的；LED 不亮/乱闪 => 换数据线、直插主板 USB 口再试。
+1. **flash blink 变体后用 pio 监视器判读**：`pio run -t upload -e esp32c3_blink`，
+   然后 `pio device monitor`。打开后若只有（最多）一条 ROM 横幅然后**静默** =>
+   芯片稳定，刷屏是工具触发的；横幅**连续重复** => 芯片仍在复位循环。
+   注意：不要用板载 LED 判读——合宙 ESP32C3-CORE 的两个灯是电源灯和网络灯，
+   不受 blink 固件控制（PIO 的 LED_BUILTIN 指向 GPIO8，与板上灯无关）。
 2. 芯片稳定后，**只开一个** `python -m platformio device monitor`（已钳住
    DTR/RTS）验证 responder/透传。
 3. 若 pio 监视器也刷屏，把完整日志贴出来，注意里面是否夹着
