@@ -1,21 +1,23 @@
-// ESP32-C3 有线桥 v0 —— 方案验证（需求文档 TR-B5/TR-B7，里程碑 M5a）
+// ESP32-C3 有线桥 v0 —— 方案验证（需求文档 TR-B5，里程碑 M5a）
 //
 // 拓扑:  PC --USB-CDC--> ESP32-C3 --UART1--> FOC 板(USART3)
 //
-// 行为: 双向纯透传，对协议字节零修改、零注入。
+// 编译变体（platformio.ini 环境选择，默认透传）:
+//   esp32c3_usb       默认透传: CDC<->UART1 双向搬运，协议字节零修改。
+//   esp32c3_uart0     CH340/UART0 型板子: PC 侧改走 UART0。
+//   esp32c3_responder 无 FOC 板验证: CDC 上模拟 FOC 的 ASCII 应答。
+//   esp32c3_blink     定位工具: 只闪灯，不碰任何串口，用于隔离复位问题。
+//
 // 未来无线化（M5b）时，成帧/ACK 只出现在两片 ESP32 的 2.4G 链路上，
 // 本固件的 CDC 与 UART 段保持透传不变。
-//
-// 编译变体 BRIDGE_MODE_RESPONDER=1（env:esp32c3_responder）：不做透传，
-// 改为在 CDC 口上模拟 FOC 的 ASCII 协议应答（status/param-status/ok），
-// 用于 FOC 板卡缺位时的 PC<->C3 链路验证。
 //
 // 接线（共地！）:
 //   C3 GPIO4 (UART1 TX) -> FOC PB11 (USART3 RX)
 //   C3 GPIO5 (UART1 RX) <- FOC PB10 (USART3 TX)
 //   C3 GND              <-> FOC GND
 //
-// 注意: C3 复位时 USB 会重新枚举（USB-Serial-JTAG 特性），上位机需容忍。
+// 注意: C3 复位时 USB 会重新枚举（USB-Serial-JTAG 特性），上位机需容忍；
+//       DTR/RTS 纪律见需求 TR-B7 与 README 故障排查一节。
 
 #include <Arduino.h>
 
@@ -30,6 +32,8 @@ static Stream& pcSerial = Serial;
 static HardwareSerial linkSerial(1);
 
 static uint8_t transferChunk[CHUNK_SIZE];
+
+#if !BRIDGE_MODE_BLINK
 
 // 把 from 里当前可读的字节搬到 to，单次至多 CHUNK_SIZE。
 // 使用逐字节读打包成块写，兼容 HWCDC / HardwareSerial 两种 Stream 实现。
@@ -54,15 +58,20 @@ static void pumpStream(Stream& from, Stream& to) {
   }
 }
 
-void setup() {
+#endif  // !BRIDGE_MODE_BLINK
+
+#if BRIDGE_MODE_BLINK
+
+static void setupVariant() {
   pinMode(LED_BUILTIN, OUTPUT);
-  linkSerial.begin(LINK_BAUD, SERIAL_8N1, LINK_RX_PIN, LINK_TX_PIN);
-  // PC 侧不等待主机连接：桥必须无头可用。
-  // Serial 在两种编译变体下自动映射：JTAG 型 -> HWCDC；UART0 型 -> HardwareSerial(0)。
-  Serial.begin(LINK_BAUD);
 }
 
-#if BRIDGE_MODE_RESPONDER
+static void loopVariant() {
+  digitalWrite(LED_BUILTIN, (millis() / 500) & 1 ? HIGH : LOW);
+  delay(500);
+}
+
+#elif BRIDGE_MODE_RESPONDER
 
 // ---- 应答器模式: 模拟 FOC 的最小 ASCII 协议 ----
 // status        -> 一行遥测（seq 递增，24V/Idle/零电流）
@@ -92,10 +101,8 @@ static void handleLine(String& line) {
 static void responderPump() {
   while (pcSerial.available() > 0) {
     char ch = static_cast<char>(pcSerial.read());
-    if (ch == '\r') {
-      continue;
-    }
-    if (ch == '\n') {
+    // \r 与 \n 都作为行结束：不同终端的回车键只发其中一种
+    if (ch == '\r' || ch == '\n') {
       handleLine(pendingLine);
       pendingLine = "";
     } else if (pendingLine.length() < 96) {
@@ -104,7 +111,15 @@ static void responderPump() {
   }
 }
 
-void loop() {
+static void setupVariant() {
+  pinMode(LED_BUILTIN, OUTPUT);
+  // 应答器只用 CDC，无需 UART1
+  Serial.begin(LINK_BAUD);
+  delay(500);
+  pcSerial.print("foc-bridge responder ready\r\n");
+}
+
+static void loopVariant() {
   responderPump();
 #ifdef LED_BUILTIN
   digitalWrite(LED_BUILTIN, (millis() / 500) & 1 ? HIGH : LOW);
@@ -114,11 +129,17 @@ void loop() {
 
 #else
 
-void loop() {
+static void setupVariant() {
+  pinMode(LED_BUILTIN, OUTPUT);
+  // Serial 在两种编译变体下自动映射：JTAG 型 -> HWCDC；UART0 型 -> HardwareSerial(0)。
+  linkSerial.begin(LINK_BAUD, SERIAL_8N1, LINK_RX_PIN, LINK_TX_PIN);
+  Serial.begin(LINK_BAUD);
+}
+
+static void loopVariant() {
   pumpStream(pcSerial, linkSerial);
   pumpStream(linkSerial, pcSerial);
 
-  // 心跳灯: 2 Hz 常亮闪烁表示固件在跑; 有数据活动时常亮。
   static uint32_t lastActivity = 0;
   uint32_t now = millis();
   bool active = pcSerial.available() > 0 || linkSerial.available() > 0;
@@ -132,11 +153,17 @@ void loop() {
     digitalWrite(LED_BUILTIN, (now / 500) & 1 ? HIGH : LOW);
   }
 #endif
-
-  // 无数据时稍作让步，降低空转功耗与占用
   if (!active) {
     delayMicroseconds(200);
   }
 }
 
-#endif  // BRIDGE_MODE_RESPONDER
+#endif  // variant selection
+
+void setup() {
+  setupVariant();
+}
+
+void loop() {
+  loopVariant();
+}
