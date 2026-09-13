@@ -6,6 +6,10 @@
 // 未来无线化（M5b）时，成帧/ACK 只出现在两片 ESP32 的 2.4G 链路上，
 // 本固件的 CDC 与 UART 段保持透传不变。
 //
+// 编译变体 BRIDGE_MODE_RESPONDER=1（env:esp32c3_responder）：不做透传，
+// 改为在 CDC 口上模拟 FOC 的 ASCII 协议应答（status/param-status/ok），
+// 用于 FOC 板卡缺位时的 PC<->C3 链路验证。
+//
 // 接线（共地！）:
 //   C3 GPIO4 (UART1 TX) -> FOC PB11 (USART3 RX)
 //   C3 GPIO5 (UART1 RX) <- FOC PB10 (USART3 TX)
@@ -58,6 +62,58 @@ void setup() {
   Serial.begin(LINK_BAUD);
 }
 
+#if BRIDGE_MODE_RESPONDER
+
+// ---- 应答器模式: 模拟 FOC 的最小 ASCII 协议 ----
+// status        -> 一行遥测（seq 递增，24V/Idle/零电流）
+// param status  -> 参数存储状态行
+// 其它非空行    -> ok
+static uint32_t responderSeq = 100;
+static String pendingLine;
+
+static void handleLine(String& line) {
+  line.trim();
+  if (line == "status") {
+    responderSeq++;
+    pcSerial.print("seq=");
+    pcSerial.print(static_cast<unsigned>(responderSeq));
+    pcSerial.print(
+        " state=1 faults=00000000 ia=0.10 ib=-0.05 ic=-0.05 "
+        "id=0.00 iq=0.00 vbus=24.00 vel=0.00 temp=27.0\r\n");
+  } else if (line == "param status") {
+    pcSerial.print(
+        "param-status valid=0 source=defaults generation=0 dirty=0 "
+        "restart-required=0\r\n");
+  } else if (line.length() > 0) {
+    pcSerial.print("ok\r\n");
+  }
+}
+
+static void responderPump() {
+  while (pcSerial.available() > 0) {
+    char ch = static_cast<char>(pcSerial.read());
+    if (ch == '\r') {
+      continue;
+    }
+    if (ch == '\n') {
+      handleLine(pendingLine);
+      pendingLine = "";
+    } else if (pendingLine.length() < 96) {
+      pendingLine += ch;
+    }
+  }
+}
+
+void loop() {
+  responderPump();
+#ifdef LED_BUILTIN
+  digitalWrite(LED_BUILTIN, (millis() / 500) & 1 ? HIGH : LOW);
+#endif
+  delayMicroseconds(200);
+}
+
+#else
+
 void loop() {
   pumpStream(pcSerial, linkSerial);
   pumpStream(linkSerial, pcSerial);
@@ -82,3 +138,5 @@ void loop() {
     delayMicroseconds(200);
   }
 }
+
+#endif  // BRIDGE_MODE_RESPONDER
