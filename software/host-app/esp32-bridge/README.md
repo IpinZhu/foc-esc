@@ -59,6 +59,21 @@ Arduino IDE 等价设置（JTAG 型）：开发板 `ESP32C3 Dev Module`，`USB M
 
 ## 故障排查：串口里反复出现 rst:0x3 / ROM 横幅（复位循环）
 
+上游已知行为（esp-idf#13590、arduino-esp32#7190）：USB-Serial-JTAG 用 DTR/RTS
+序列实现一键下载与复位，任何打开/关闭端口时翻转控制线的工具都可能触发
+`RTC_SW_SYS_RST`。单次复位（开/关口时一下）属正常；**连发刷屏**意味着有工具在
+反复翻转控制线。
+
+三步定位法：
+
+1. **flash blink 变体并拔掉所有串口终端**：`pio run -t upload -e esp32c3_blink`，
+   重新插拔 USB 后只看板载 LED（不打开任何串口工具）。LED 稳定 1 Hz 闪烁 =>
+   芯片稳定，刷屏是工具触发的；LED 不亮/乱闪 => 换数据线、直插主板 USB 口再试。
+2. 芯片稳定后，**只开一个** `python -m platformio device monitor`（已钳住
+   DTR/RTS）验证 responder/透传。
+3. 若 pio 监视器也刷屏，把完整日志贴出来，注意里面是否夹着
+   `foc-bridge responder ready`。
+
 USB-Serial-JTAG 会把主机 DTR/RTS 的特定翻转序列解析为"复位/进入下载模式"。
 串口终端打开端口或自动重连时翻转控制线 → 芯片复位 → USB 重枚举 → 终端再重连 →
 循环，表现为 ROM 横幅刷屏（`rst:0x3 (RTC_SW_SYS_RST)`）。这不是固件崩溃。
