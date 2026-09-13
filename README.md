@@ -44,6 +44,7 @@
 | 路径 | 用途 |
 |---|---|
 | [`software/firmware`](software/firmware) | Rust/Embassy STM32G473RC 固件 |
+| [`software/host-app`](software/host-app) | 上位机（Rust + Tauri）需求与工程；连接架构与协议 v1 需求见 [requirements.md](software/host-app/requirements.md) |
 | [`hardware/foc-drive/FOC2.kicad_pro`](hardware/foc-drive/FOC2.kicad_pro) | 主驱动板 KiCad 工程 |
 | [`hardware/foc-drive/FOC2.kicad_sch`](hardware/foc-drive/FOC2.kicad_sch) | 主驱动板原理图 |
 | [`hardware/foc-drive/FOC2.kicad_pcb`](hardware/foc-drive/FOC2.kicad_pcb) | 主驱动板 PCB 布局 |
