@@ -57,6 +57,23 @@ Arduino IDE 等价设置（JTAG 型）：开发板 `ESP32C3 Dev Module`，`USB M
    - 发送 `param show` 应逐行吐出全部 43 个参数。
 5. 上位机 M1 完成后，把通道类型选为串口即直接经此桥工作。
 
+## 故障排查：串口里反复出现 rst:0x3 / ROM 横幅（复位循环）
+
+USB-Serial-JTAG 会把主机 DTR/RTS 的特定翻转序列解析为"复位/进入下载模式"。
+串口终端打开端口或自动重连时翻转控制线 → 芯片复位 → USB 重枚举 → 终端再重连 →
+循环，表现为 ROM 横幅刷屏（`rst:0x3 (RTC_SW_SYS_RST)`）。这不是固件崩溃。
+
+对策（platformio.ini 已配置）：
+
+```ini
+monitor_rts = 0
+monitor_dtr = 0
+```
+
+用 `python -m platformio device monitor` 观察串口；用其它终端工具时关闭
+DTR/RTS 自动控制（或选择不带流控的连接方式）。上位机的串口层必须遵守同一
+约束（需求 TR-B7）。
+
 ## 已知边界
 
 - USB-Serial-JTAG 在芯片复位时重枚举，串口会短暂消失（上位机需容忍，见需求 TR-B5）。
