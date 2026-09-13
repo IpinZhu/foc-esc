@@ -20,8 +20,8 @@ static constexpr int LINK_TX_PIN = 4;
 static constexpr int LINK_RX_PIN = 5;
 static constexpr size_t CHUNK_SIZE = 256;
 
-// PC 侧: USB-Serial-JTAG（ARDUINO_USB_MODE=1 时 Serial 即 HWCDC）
-static HardwareSerial& pcSerial = Serial;
+// PC 侧: JTAG 型为 HWCDC、UART0 型为 HardwareSerial，共同基类是 Stream
+static Stream& pcSerial = Serial;
 // FOC 侧: UART1
 static HardwareSerial linkSerial(1);
 
@@ -53,9 +53,9 @@ static void pumpStream(Stream& from, Stream& to) {
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   linkSerial.begin(LINK_BAUD, SERIAL_8N1, LINK_RX_PIN, LINK_TX_PIN);
-  // CDC 侧不等待主机连接：桥必须无头可用，未插电脑时照常透传不可用但不阻塞。
-  pcSerial.setTxTimeoutMs(10);
-  pcSerial.begin(LINK_BAUD);
+  // PC 侧不等待主机连接：桥必须无头可用。
+  // Serial 在两种编译变体下自动映射：JTAG 型 -> HWCDC；UART0 型 -> HardwareSerial(0)。
+  Serial.begin(LINK_BAUD);
 }
 
 void loop() {

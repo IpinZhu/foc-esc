@@ -24,14 +24,28 @@ PC --USB-CDC(USB-Serial-JTAG)--> ESP32-C3 --UART1--> FOC USART3
 
 避开引脚：GPIO18/19（USB D-/D+）、GPIO2/8/9（strapping）。板载 LED（`LED_BUILTIN`）作心跳/活动指示。
 
+## 先判别：你的板子是哪种 USB？
+
+单 USB 口的 C3 板有两种形态，决定用哪个编译环境：
+
+| 形态 | 特征 | 编译环境 |
+|---|---|---|
+| **USB 直连模组**（多数单口 C3 板，如 super mini） | USB 口旁没有独立的 USB 转串口芯片；USB 走 GPIO18/19 | `esp32c3_usb`（默认），烧录与桥的 CDC 口是**同一个 USB 口** |
+| **板载 USB 转串口芯片** | USB 口旁有 CH340/CP210x 丝印的小芯片 | `esp32c3_uart0`，PC 侧透传走 UART0 |
+
 ## 构建与烧录（PlatformIO）
 
 ```bash
-pio run -t upload          # 编译并烧录
-pio device monitor         # 观察 CDC 串口
+pio run -t upload                    # 按 default_envs（JTAG 型）编译并烧录
+pio run -t upload -e esp32c3_uart0   # CH340/UART0 型板子用这个
+pio device monitor                   # 观察串口
 ```
 
-Arduino IDE 等价设置：开发板 `ESP32C3 Dev Module`，`USB Mode: Hardware JTAG/TinyUSB`选 **Hardware JTAG**，`USB CDC On Boot: Enabled`。
+首次编译会下载 ESP32 工具链，耐心等待。烧录失败（JTAG 型）时的兜底：按住 BOOT 键 → 短按 RESET → 松开 RESET → 松开 BOOT → 再烧录。
+
+Arduino IDE 等价设置（JTAG 型）：开发板 `ESP32C3 Dev Module`，`USB Mode: Hardware JTAG`，`USB CDC On Boot: Enabled`。
+
+**注意（UART0 型）**：上位机/终端每次打开串口，DTR/RTS 自动进 Boot 电路可能令 C3 复位一次，属正常现象；复位横幅（乱码）之后即是干净的透传数据。
 
 ## 验证步骤
 
