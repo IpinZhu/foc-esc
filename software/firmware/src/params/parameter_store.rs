@@ -246,9 +246,9 @@ where
         let pre_commit = RECORD_HEADER_SIZE + P::PAYLOAD_SIZE;
 
         self.backend.erase_page(base).map_err(StoreError::Erase)?;
-        for (index, chunk) in record[..pre_commit].chunks_exact(8).enumerate() {
-            let bytes: &[u8; 8] =
-                chunk.try_into().map_err(|_| StoreError::Verify)?;
+        for (index, bytes) in
+            record[..pre_commit].as_chunks::<8>().0.iter().enumerate()
+        {
             self.backend
                 .program_double_word(base + (index * 8) as u32, bytes)
                 .map_err(StoreError::Program)?;
