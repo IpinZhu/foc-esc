@@ -100,11 +100,7 @@ pub enum Command {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ParameterRoute {
     Uart,
-    Can {
-        transaction: u8,
-        request_id: u16,
-        request_data: [u8; 8],
-    },
+    Can { transaction: u8 },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
