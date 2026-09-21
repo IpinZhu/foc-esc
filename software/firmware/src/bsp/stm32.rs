@@ -43,10 +43,10 @@ use crate::control::foc_math::PhaseDuty;
 use crate::control::foc_math::normalize_angle;
 use crate::interfaces::{RawAdcFrame, RotorSample};
 
-pub const TIMER_CLOCK_HZ: u32 = 170_000_000;
-pub const PWM_FREQUENCY_HZ: u32 = 100_000;
-pub const DEAD_TIME_NS: u32 = 200;
-pub const DEAD_TIME_TICKS: u16 = 34;
+pub const TIMER_CLOCK_HZ: u32 = crate::timing::TIMER_CLOCK_HZ;
+pub const PWM_FREQUENCY_HZ: u32 = crate::timing::PWM_FREQUENCY_HZ;
+pub const DEAD_TIME_NS: u32 = crate::timing::DEAD_TIME_NS;
+pub const DEAD_TIME_TICKS: u16 = crate::timing::DEAD_TIME_TICKS;
 pub const ENCODER_COUNTS_PER_REVOLUTION: u16 = 4_096;
 pub const HALL_TIMER_FREQUENCY_HZ: u32 = 10_000;
 
