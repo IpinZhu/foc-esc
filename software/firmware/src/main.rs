@@ -1,11 +1,6 @@
 #![cfg_attr(target_arch = "arm", no_std)]
 #![cfg_attr(target_arch = "arm", no_main)]
 
-#[cfg(all(feature = "sensor-encoder", feature = "sensor-hall"))]
-compile_error!("select exactly one rotor sensor feature");
-#[cfg(not(any(feature = "sensor-encoder", feature = "sensor-hall")))]
-compile_error!("select one rotor sensor feature");
-
 #[cfg(target_arch = "arm")]
 mod firmware {
     use defmt::{info, warn};
@@ -37,11 +32,12 @@ mod firmware {
         publish_parameter_response, publish_telemetry, try_receive_command,
         try_receive_parameter_request, uart_task,
     };
+    use foc_firmware::comm::{ParameterTransactionCache, TransactionLookup};
     use foc_firmware::control::foc_core::{FocConfig, FocController};
     use foc_firmware::control::foc_math::PhaseDuty;
     use foc_firmware::interfaces::{
         Command, ControlMode, MotorState, ParameterAction, ParameterRequest,
-        ParameterResponse, ParameterResultCode, ParameterRoute, Telemetry,
+        ParameterResponse, ParameterResultCode, Telemetry,
     };
     use foc_firmware::params::motor_param::{MOTOR_SLOT_LAYOUT, MotorParam};
     use foc_firmware::params::parameter_service::ParameterState;
@@ -252,13 +248,6 @@ mod firmware {
         parameters.replace_working(profile);
     }
 
-    fn can_transaction(route: ParameterRoute) -> Option<u8> {
-        match route {
-            | ParameterRoute::Can { transaction, .. } => Some(transaction),
-            | ParameterRoute::Uart => None,
-        }
-    }
-
     fn apply_autotune_request(
         controller: &mut FocController,
         request: ControlRequest,
@@ -374,10 +363,7 @@ mod firmware {
         let telemetry_divider = (config.pwm_frequency_hz / 1_000).max(1);
         let autotune_tick_divider = (config.pwm_frequency_hz / 1_000).max(1);
         let mut autotune_frame_counter: u32 = 0;
-        let mut last_can_response: Option<(
-            ParameterRequest,
-            ParameterResponse,
-        )> = None;
+        let mut parameter_transactions = ParameterTransactionCache::new();
         let mut control_view = Telemetry::default();
 
         pwm.disable();
@@ -423,28 +409,18 @@ mod firmware {
                 }
             }
 
-            while let Some(request) = try_receive_parameter_request() {
-                let transaction = can_transaction(request.route);
-                let response = match (transaction, last_can_response) {
-                    | (
-                        Some(transaction),
-                        Some((cached_request, cached_response)),
-                    ) if can_transaction(cached_request.route)
-                        == Some(transaction) =>
-                    {
-                        if request == cached_request {
-                            cached_response
-                        } else {
-                            ParameterResponse {
-                                route: request.route,
-                                action: request.action,
-                                result: ParameterResultCode::Conflict,
-                                value: None,
-                                storage: parameters.status(),
-                            }
-                        }
+            while let Some(envelope) = try_receive_parameter_request() {
+                let request = envelope.request();
+                let response = match parameter_transactions.lookup(envelope) {
+                    | TransactionLookup::Replay(response) => response,
+                    | TransactionLookup::Conflict => ParameterResponse {
+                        route: request.route,
+                        action: request.action,
+                        result: ParameterResultCode::Conflict,
+                        value: None,
+                        storage: parameters.status(),
                     },
-                    | _ => process_parameter_request(
+                    | TransactionLookup::New => process_parameter_request(
                         request,
                         &mut pwm,
                         &mut controller,
@@ -453,10 +429,8 @@ mod firmware {
                     ),
                 };
 
-                if transaction.is_some()
-                    && !matches!(response.result, ParameterResultCode::Conflict)
-                {
-                    last_can_response = Some((request, response));
+                if !matches!(response.result, ParameterResultCode::Conflict) {
+                    parameter_transactions.record(envelope, response);
                 }
                 let _ = publish_parameter_response(response);
             }

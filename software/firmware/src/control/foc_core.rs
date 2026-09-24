@@ -10,8 +10,8 @@ use crate::interfaces::{
 use crate::params::motor_param::MotorParam;
 use crate::params::parameters::ParameterProfileV1;
 
-pub const DEFAULT_PWM_FREQUENCY_HZ: u32 = 100_000;
-pub const DEFAULT_DEAD_TIME_NS: u32 = 200;
+pub const DEFAULT_PWM_FREQUENCY_HZ: u32 = crate::timing::PWM_FREQUENCY_HZ;
+pub const DEFAULT_DEAD_TIME_NS: u32 = crate::timing::DEAD_TIME_NS;
 
 #[derive(Clone, Copy, Debug)]
 pub struct FocConfig {
