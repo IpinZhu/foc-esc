@@ -546,6 +546,14 @@ impl AutoTuneController {
         }
     }
 
+    /// Aborts tuning and discards queued actions and persistence work. The
+    /// owning control task must disable the bridge directly after this call.
+    pub fn abort_and_drain(&mut self) {
+        self.stop();
+        while self.pop_request().is_some() {}
+        let _ = self.take_save_request();
+    }
+
     /// Queues a control request for the motor task. The capacity bound is
     /// never reached by the procedure (at most three are queued at once).
     fn push_request(&mut self, request: ControlRequest) {
@@ -1530,6 +1538,17 @@ mod tests {
         // Terminal states accept a fresh start.
         assert!(harness.autotune.start(MotorParam::default()));
         harness.autotune.stop();
+    }
+
+    #[test]
+    fn abort_and_drain_discards_disable_request_and_save_work() {
+        let mut harness = Harness::new(0.05, 0.000_2);
+        assert!(harness.autotune.start(MotorParam::default()));
+        harness.autotune.abort_and_drain();
+        assert!(!harness.autotune.is_running());
+        assert!(!harness.autotune.has_pending_requests());
+        assert_eq!(harness.autotune.pop_request(), None);
+        assert_eq!(harness.autotune.take_save_request(), None);
     }
 
     #[test]

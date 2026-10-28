@@ -9,12 +9,18 @@ pub use super::can::{
 pub use super::uart::{
     AutoTuneAction, ParseError, UartRequest, parse_uart_request,
 };
+#[cfg(target_arch = "arm")]
+pub use super::uart::{
+    TextBuffer, format_autotune_status, format_parameter_response,
+    format_telemetry,
+};
 
 #[cfg(target_arch = "arm")]
 pub use super::broker::{
-    publish_autotune_status, publish_parameter_response, publish_telemetry,
+    latest_telemetry, mark_telemetry_unavailable, publish_autotune_status,
+    publish_parameter_response, publish_telemetry, publish_wire_response,
     try_get_autotune_status, try_receive_command,
-    try_receive_parameter_request,
+    try_receive_parameter_request, try_receive_wire_request,
 };
 #[cfg(target_arch = "arm")]
 pub use super::tasks::{can_receive_task, can_telemetry_task, uart_task};

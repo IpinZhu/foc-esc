@@ -57,6 +57,7 @@ bind_interrupts!(pub struct BoardIrqs {
     DMA1_CHANNEL2 => dma::InterruptHandler<peripherals::DMA1_CH2>;
     FDCAN1_IT0 => can::IT0InterruptHandler<peripherals::FDCAN1>;
     FDCAN1_IT1 => can::IT1InterruptHandler<peripherals::FDCAN1>;
+    RNG => embassy_stm32::rng::InterruptHandler<peripherals::RNG>;
 });
 
 pub struct Tim1PwmBridge<'d> {

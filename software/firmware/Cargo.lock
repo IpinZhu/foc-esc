@@ -558,10 +558,15 @@ dependencies = [
  "embassy-sync",
  "embassy-time",
  "embedded-can",
+ "foc-wire",
  "libm",
  "panic-probe",
  "static_cell",
 ]
+
+[[package]]
+name = "foc-wire"
+version = "0.2.0"
 
 [[package]]
 name = "futures-core"

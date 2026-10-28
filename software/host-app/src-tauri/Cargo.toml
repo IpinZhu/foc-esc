@@ -1,0 +1,15 @@
+[package]
+name = "foc-studio"
+version = "0.1.0"
+edition = "2021"
+[lib]
+name = "foc_studio_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+[dependencies]
+tauri = { version = "2", features = ["image-png"] }
+serde = { version = "1", features = ["derive"] }
+device-foc = { path = "../crates/device-foc" }
+tokio = { version = "1", features = ["sync"] }
+host-transport = { path = "../crates/host-transport" }

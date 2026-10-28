@@ -4,6 +4,7 @@ use embassy_stm32::mode::Async;
 use embassy_stm32::usart::Uart;
 use embassy_time::Timer;
 use embedded_can::Id;
+use foc_wire::{Decoder, MAX_FRAME};
 
 use crate::interfaces::{
     Command, ParameterAction, ParameterRequest, ParameterRoute,
@@ -28,15 +29,64 @@ pub async fn uart_task(mut uart: Uart<'static, Async>) {
     let mut line = [0u8; 128];
     let mut length = 0;
     let mut discarding_line = false;
+    let mut decoder = Decoder::new();
+    let mut binary_mode = false;
+    let mut pending_f = false;
 
     loop {
         let mut byte = [0u8; 1];
-        if uart.read(&mut byte).await.is_err() {
-            Timer::after_millis(1).await;
+        match select(uart.read(&mut byte), Timer::after_millis(100)).await {
+            | Either::First(Ok(())) => {},
+            | Either::First(Err(_)) => continue,
+            | Either::Second(_) => {
+                if binary_mode {
+                    decoder.reset();
+                    binary_mode = false;
+                }
+                continue;
+            },
+        }
+
+        let value = byte[0];
+        if binary_mode {
+            if let Some(request) = decoder.push(value) {
+                binary_mode = false;
+                broker::send_wire_request(request).await;
+                let response = broker::receive_wire_response().await;
+                let mut encoded = [0u8; MAX_FRAME];
+                let count = response.encode(&mut encoded);
+                if count != 0 {
+                    let _ = uart.write(&encoded[..count]).await;
+                }
+            }
+            continue;
+        }
+        if pending_f {
+            pending_f = false;
+            if value == b'C' {
+                // Framed traffic must never fall back into ASCII execution.
+                binary_mode = true;
+                length = 0;
+                discarding_line = false;
+                decoder.reset();
+                let _ = decoder.push(b'F');
+                let _ = decoder.push(b'C');
+                continue;
+            }
+            if length < line.len() {
+                line[length] = b'F';
+                length += 1;
+            } else {
+                discarding_line = true;
+                length = 0;
+            }
+        }
+        if value == b'F' && !discarding_line {
+            pending_f = true;
             continue;
         }
 
-        match byte[0] {
+        match value {
             | b'\r' => {},
             | b'\n' => {
                 if discarding_line {

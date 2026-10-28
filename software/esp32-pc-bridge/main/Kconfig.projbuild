@@ -1,0 +1,65 @@
+menu "FOC PC bridge"
+choice BRIDGE_ROLE
+    prompt "Firmware role"
+    default BRIDGE_ROLE_RECEIVER
+config BRIDGE_ROLE_RECEIVER
+    bool "Legacy v1 PC receiver"
+config BRIDGE_ROLE_MOCK_TX
+    bool "Legacy v1 fake FOC transmitter (plaintext test only)"
+config BRIDGE_ROLE_PC
+    bool "v2 PC duplex bridge"
+config BRIDGE_ROLE_MOTOR
+    bool "v2 motor duplex bridge"
+endchoice
+choice BRIDGE_OUTPUT
+    prompt "Legacy receiver connection"
+    default BRIDGE_OUTPUT_USB
+config BRIDGE_OUTPUT_USB
+    bool "Native USB Serial/JTAG (GPIO18/19 reserved)"
+config BRIDGE_OUTPUT_UART
+    bool "UART0 receiver (115200 8N1)"
+endchoice
+config BRIDGE_CHANNEL
+    int "ESP-NOW channel"
+    range 1 13
+    default 6
+config BRIDGE_SOURCE_MAC
+    string "Legacy v1 accepted source MAC"
+    default "02:46:4f:43:00:01"
+config BRIDGE_DESTINATION_MAC
+    string "Legacy mock destination MAC"
+    default "ff:ff:ff:ff:ff:ff"
+    depends on BRIDGE_ROLE_MOCK_TX
+config BRIDGE_UART_TX_GPIO
+    int "UART0 TX pin"
+    range 0 21
+    default 21
+    depends on BRIDGE_OUTPUT_UART
+config BRIDGE_UART_RX_GPIO
+    int "UART0 RX pin"
+    range 0 21
+    default 20
+    depends on BRIDGE_OUTPUT_UART
+config BRIDGE_MOTOR_TX_GPIO
+    int "STM32 UART TX GPIO"
+    range 0 21
+    default 4
+    depends on BRIDGE_ROLE_MOTOR
+config BRIDGE_MOTOR_RX_GPIO
+    int "STM32 UART RX GPIO"
+    range 0 21
+    default 5
+    depends on BRIDGE_ROLE_MOTOR
+config BRIDGE_PEER_MAC
+    string "Encrypted v2 peer station MAC"
+    default "00:00:00:00:00:00"
+    depends on BRIDGE_ROLE_PC || BRIDGE_ROLE_MOTOR
+config BRIDGE_WIFI_PMK
+    string "ESP-NOW PMK (16 ASCII bytes; inject locally)"
+    default ""
+    depends on BRIDGE_ROLE_PC || BRIDGE_ROLE_MOTOR
+config BRIDGE_WIFI_LMK
+    string "ESP-NOW LMK (16 ASCII bytes; inject locally)"
+    default ""
+    depends on BRIDGE_ROLE_PC || BRIDGE_ROLE_MOTOR
+endmenu

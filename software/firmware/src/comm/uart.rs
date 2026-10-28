@@ -175,22 +175,29 @@ fn parse_parameter_request<'a>(
 }
 
 #[cfg(target_arch = "arm")]
-pub(crate) struct TextBuffer<const N: usize> {
+pub struct TextBuffer<const N: usize> {
     bytes: [u8; N],
     len: usize,
 }
 
 #[cfg(target_arch = "arm")]
 impl<const N: usize> TextBuffer<N> {
-    pub(crate) const fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             bytes: [0; N],
             len: 0,
         }
     }
 
-    pub(crate) fn as_bytes(&self) -> &[u8] {
+    pub fn as_bytes(&self) -> &[u8] {
         &self.bytes[..self.len]
+    }
+}
+
+#[cfg(target_arch = "arm")]
+impl<const N: usize> Default for TextBuffer<N> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -208,7 +215,7 @@ impl<const N: usize> Write for TextBuffer<N> {
 }
 
 #[cfg(target_arch = "arm")]
-pub(crate) fn format_telemetry(
+pub fn format_telemetry(
     telemetry: &Telemetry,
     output: &mut TextBuffer<256>,
 ) -> fmt::Result {
@@ -242,7 +249,7 @@ fn write_parameter_value(
 }
 
 #[cfg(target_arch = "arm")]
-pub(crate) fn format_parameter_response(
+pub fn format_parameter_response(
     response: &ParameterResponse,
     output: &mut TextBuffer<256>,
 ) -> fmt::Result {
@@ -324,7 +331,7 @@ fn write_parameter_status(
 }
 
 #[cfg(target_arch = "arm")]
-pub(crate) fn format_autotune_status(
+pub fn format_autotune_status(
     status: Option<AutoTuneStatus>,
     output: &mut TextBuffer<256>,
 ) -> fmt::Result {

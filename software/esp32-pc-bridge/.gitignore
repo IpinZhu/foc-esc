@@ -1,0 +1,9 @@
+/.tools/
+/build*/
+/sdkconfig
+/sdkconfig.*
+!/sdkconfig.defaults
+!/sdkconfig.*.defaults
+/.venv/
+/__pycache__/
+/tools/__pycache__/
