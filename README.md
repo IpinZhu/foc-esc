@@ -46,6 +46,7 @@
 | 路径 | 用途 |
 |---|---|
 | [`software/firmware`](software/firmware) | Rust/Embassy STM32G473RC 固件 |
+| [`software/foc-sim`](software/foc-sim/README.md) | Rust 主机仿真 M1：有感 FOC 与独立 PMSM 电气/机械模型 |
 | [`software/host-app`](software/host-app/README.md) | Vue + Tauri 上位机；监控、参数管理、控制、自整定入口与录制导出 |
 | [`software/esp32-pc-bridge`](software/esp32-pc-bridge/README.md) | 原生 ESP-IDF / ESP32-C3 串口与 ESP-NOW 桥接；替代旧 PlatformIO 工程 |
 | [`software/foc-wire`](software/foc-wire) | 固件与上位机共享的 `no_std` v2 帧协议、CRC 与控制权租约 |
@@ -87,6 +88,10 @@ cargo build --release --bin foc-firmware \
 ```
 
 固件 `.cargo/config.toml` 配置了 `thumbv7em-none-eabihf`、`link.x`、`defmt.x` 以及针对 STM32G473RC 的 `probe-rs` 烧录运行器。烧录需要正确连接且获得授权的调试探针；本文档不会执行烧录操作。
+
+## 软件仿真计划
+
+[无感 FOC 软件仿真实施方案](docs/sensorless-simulation-plan.md) 定义了独立 Rust 电机模型、现有固件闭环接入、非理想因素、旁路观测器及无感接管的阶段和验收标准。[主机仿真 M1](software/foc-sim/README.md) 已实现有感物理闭环基线和使用实际转子动力学的自整定参数验证，M2–M5 尚未实施；当前上位机模拟器和自整定流程测试不代表完整的无感物理仿真。
 
 ## 硬件概要
 

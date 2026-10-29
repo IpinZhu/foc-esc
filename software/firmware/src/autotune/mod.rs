@@ -22,7 +22,7 @@ use crate::autotune::measure::{
 };
 use crate::control::foc_core::FocConfig;
 use crate::control::foc_math::{
-    AlphaBeta, PhaseCurrents, PhaseDuty, clarke, svpwm,
+    AlphaBeta, PhaseCurrents, PhaseDuty, clarke, normalize_angle, park, svpwm,
 };
 use crate::interfaces::{
     ControlMode, FaultFlags, MotorState, RawAdcFrame, Telemetry,
@@ -181,6 +181,8 @@ pub struct AutoTuneConfig {
     pub bus_divider_low: f32,
     pub minimum_duty: f32,
     pub maximum_duty: f32,
+    pub sensor_direction: f32,
+    pub electrical_zero: f32,
 
     pub max_current: f32,
     pub over_current_threshold: f32,
@@ -224,6 +226,7 @@ pub struct AutoTuneConfig {
     pub open_loop_voltage_ramp: f32,
     pub open_loop_max_voltage_ratio: f32,
     pub open_loop_ratio_tolerance: f32,
+    pub open_loop_sync_timeout: f32,
 
     pub flux_time: f32,
     pub flux_stride: u32,
@@ -249,6 +252,8 @@ impl AutoTuneConfig {
             bus_divider_low: config.bus_divider_low,
             minimum_duty: config.minimum_duty,
             maximum_duty: config.maximum_duty,
+            sensor_direction: config.sensor_direction,
+            electrical_zero: config.electrical_zero,
             max_current: (config.current_limit * 0.5)
                 .min(config.over_current_threshold * 0.6),
             over_current_threshold: config.over_current_threshold,
@@ -273,6 +278,8 @@ impl Default for AutoTuneConfig {
             bus_divider_low: 10_000.0,
             minimum_duty: 0.05,
             maximum_duty: 0.95,
+            sensor_direction: 1.0,
+            electrical_zero: 0.0,
             max_current: 10.0,
             over_current_threshold: 55.0,
             residual_threshold: 3.0,
@@ -310,6 +317,7 @@ impl Default for AutoTuneConfig {
             open_loop_voltage_ramp: 4.0,
             open_loop_max_voltage_ratio: 0.45,
             open_loop_ratio_tolerance: 0.2,
+            open_loop_sync_timeout: 0.5,
             flux_time: 0.3,
             flux_stride: 3,
             flux_min: 1.0e-4,
@@ -1290,6 +1298,7 @@ impl AutoTuneController {
         let reached = iq >= 0.8 * self.open_loop_target_current;
         let max_voltage = self.open_loop_max_voltage();
         if !reached {
+            self.open_loop_settled_time = 0.0;
             if self.open_loop_voltage < max_voltage {
                 self.open_loop_voltage = (self.open_loop_voltage
                     + self.config.open_loop_voltage_ramp * dt)
@@ -1308,12 +1317,17 @@ impl AutoTuneController {
         } else {
             // Synchronization check against the rotor sensor: the imposed
             // electrical speed must match the measured mechanical speed.
-            let ratio = (telemetry.mechanical_velocity
+            let ratio = telemetry.mechanical_velocity
+                * self.config.sensor_direction
                 * f32::from(self.motor.pole_pairs)
-                / self.open_loop_velocity)
-                .abs();
-            if (ratio - 1.0).abs() > self.config.open_loop_ratio_tolerance {
-                self.fail(AutoTuneError::OpenLoopFailed);
+                / self.open_loop_velocity;
+            if !ratio.is_finite()
+                || (ratio - 1.0).abs() > self.config.open_loop_ratio_tolerance
+            {
+                self.open_loop_settled_time = 0.0;
+                if self.elapsed >= self.config.open_loop_sync_timeout {
+                    self.fail(AutoTuneError::OpenLoopFailed);
+                }
                 return;
             }
             self.open_loop_settled_time += dt;
@@ -1335,11 +1349,34 @@ impl AutoTuneController {
         if tick_index.is_multiple_of(self.config.flux_stride.max(1))
             && self.flux_sample_count < FLUX_SAMPLE_CAPACITY
         {
-            let omega = self.open_loop_velocity;
-            let flux = (telemetry.voltage_dq.q
-                - self.motor.rs * telemetry.current_dq.q)
+            let omega = telemetry.mechanical_velocity
+                * self.config.sensor_direction
+                * f32::from(self.motor.pole_pairs);
+            let theta = normalize_angle(
+                self.config.sensor_direction
+                    * f32::from(self.motor.pole_pairs)
+                    * telemetry.mechanical_angle
+                    - self.config.electrical_zero,
+            );
+            let duty = telemetry.duty;
+            let voltage = AlphaBeta {
+                alpha: (2.0 * duty.a - duty.b - duty.c) * telemetry.bus_voltage
+                    / 3.0,
+                beta: (duty.b - duty.c) * telemetry.bus_voltage
+                    / crate::control::foc_math::SQRT_3,
+            };
+            let voltage_dq = park(voltage, theta);
+            let current_dq = park(clarke(telemetry.currents), theta);
+            let flux = (voltage_dq.q
+                - self.motor.rs * current_dq.q
+                - omega * self.motor.ld * current_dq.d)
                 / omega;
-            if flux.is_finite() && self.flux_sample_count < FLUX_SAMPLE_CAPACITY
+            if telemetry.sensor_valid
+                && omega.is_finite()
+                && (omega / self.open_loop_velocity - 1.0).abs()
+                    <= self.config.open_loop_ratio_tolerance
+                && flux.is_finite()
+                && self.flux_sample_count < FLUX_SAMPLE_CAPACITY
             {
                 self.flux_samples[self.flux_sample_count] = flux;
                 self.flux_sample_count += 1;
@@ -1414,7 +1451,7 @@ impl AutoTuneController {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::control::foc_math::Dq;
+    use crate::control::foc_math::{Dq, inverse_park};
 
     const FREQ: f32 = 100_000.0;
 
@@ -1781,6 +1818,44 @@ mod tests {
     }
 
     #[test]
+    fn open_loop_sync_allows_acceleration_but_rejects_reverse_rotation() {
+        let mut harness = Harness::new(0.5, 0.000_2);
+        harness.autotune.start(MotorParam::default());
+        harness.autotune.enter(AutoTuneState::OpenLoopPrepare);
+        harness.autotune.enter(AutoTuneState::OpenLoopRun);
+        let omega = harness.autotune.open_loop_velocity;
+        let current = harness.autotune.open_loop_target_current;
+        let stationary =
+            running_telemetry(ControlMode::OpenLoop, current, 1.0, 0.0);
+        for _ in 0..200 {
+            harness.autotune.task_tick(0.001, Some(&stationary));
+        }
+        assert_eq!(harness.autotune.state(), AutoTuneState::OpenLoopRun);
+        let synced =
+            running_telemetry(ControlMode::OpenLoop, current, 1.0, omega / 4.0);
+        for _ in 0..105 {
+            harness.autotune.task_tick(0.001, Some(&synced));
+        }
+        assert_eq!(harness.autotune.state(), AutoTuneState::FluxMeasure);
+
+        harness.autotune.enter(AutoTuneState::OpenLoopRun);
+        let reverse = running_telemetry(
+            ControlMode::OpenLoop,
+            current,
+            1.0,
+            -omega / 4.0,
+        );
+        for _ in 0..600 {
+            if harness.autotune.state() == AutoTuneState::Error {
+                break;
+            }
+            harness.autotune.task_tick(0.001, Some(&reverse));
+        }
+        assert_eq!(harness.autotune.state(), AutoTuneState::Error);
+        assert_eq!(harness.autotune.error(), AutoTuneError::OpenLoopFailed);
+    }
+
+    #[test]
     fn flux_measurement_extracts_back_emf_constant() {
         let mut harness = Harness::new(0.5, 0.000_2);
         harness.autotune.start(MotorParam::default());
@@ -1790,10 +1865,25 @@ mod tests {
 
         let omega = harness.autotune.open_loop_velocity;
         let flux_true = 0.01;
+        let id = 0.4;
         let iq = 1.5;
-        let uq = 0.5 * iq + omega * flux_true;
-        let telemetry =
-            running_telemetry(ControlMode::OpenLoop, iq, uq, omega / 4.0);
+        let theta = 0.37;
+        let vd = 0.5 * id - omega * 0.000_2 * iq;
+        let vq = 0.5 * iq + omega * (0.000_2 * id + flux_true);
+        let current = inverse_park(Dq { d: id, q: iq }, theta);
+        let voltage = inverse_park(Dq { d: vd, q: vq }, theta);
+        let telemetry = Telemetry {
+            mechanical_angle: theta / 4.0,
+            currents: PhaseCurrents {
+                a: current.alpha,
+                b: -0.5 * current.alpha
+                    + crate::control::foc_math::SQRT_3_OVER_2 * current.beta,
+                c: -0.5 * current.alpha
+                    - crate::control::foc_math::SQRT_3_OVER_2 * current.beta,
+            },
+            duty: svpwm(voltage, 24.0, 0.05, 0.95),
+            ..running_telemetry(ControlMode::OpenLoop, iq, vq, omega / 4.0)
+        };
         // Tick until the flux window completes.
         let mut guard = 0;
         while harness.autotune.state() == AutoTuneState::FluxMeasure
@@ -1819,6 +1909,51 @@ mod tests {
         assert!((motor.observer_gain - bandwidth * flux_true).abs() < 1.0e-3);
         assert!((motor.pll_kp - 2.0 * bandwidth).abs() < 1.0e-2);
         assert!((motor.pll_ki - bandwidth * bandwidth).abs() < 1.0e-1);
+    }
+
+    #[test]
+    fn flux_measurement_respects_reversed_sensor_and_electrical_zero() {
+        let mut harness = Harness::new(0.5, 0.000_2);
+        harness.autotune.start(MotorParam::default());
+        harness.autotune.config.sensor_direction = -1.0;
+        harness.autotune.config.electrical_zero = 0.4;
+        harness.autotune.motor.rs = 0.5;
+        harness.autotune.motor.ld = 0.000_2;
+        harness.autotune.open_loop_velocity = core::f32::consts::TAU * 5.0;
+        harness.autotune.enter(AutoTuneState::FluxMeasure);
+        let omega = harness.autotune.open_loop_velocity;
+        let theta = -0.8;
+        let id = 0.4;
+        let iq = 1.0;
+        let flux = 0.01;
+        let voltage = inverse_park(
+            Dq {
+                d: 0.5 * id - omega * 0.000_2 * iq,
+                q: 0.5 * iq + omega * (flux + 0.000_2 * id),
+            },
+            theta,
+        );
+        let current = inverse_park(Dq { d: id, q: iq }, theta);
+        let telemetry = Telemetry {
+            mechanical_angle: 0.1,
+            currents: PhaseCurrents {
+                a: current.alpha,
+                b: -0.5 * current.alpha
+                    + crate::control::foc_math::SQRT_3_OVER_2 * current.beta,
+                c: -0.5 * current.alpha
+                    - crate::control::foc_math::SQRT_3_OVER_2 * current.beta,
+            },
+            duty: svpwm(voltage, 24.0, 0.05, 0.95),
+            ..running_telemetry(ControlMode::OpenLoop, iq, 1.0, -omega / 4.0)
+        };
+        for _ in 0..320 {
+            if harness.autotune.state() != AutoTuneState::FluxMeasure {
+                break;
+            }
+            harness.autotune.task_tick(0.001, Some(&telemetry));
+        }
+        assert_eq!(harness.autotune.state(), AutoTuneState::ObserverInit);
+        assert!((harness.autotune.motor.flux - flux).abs() < 1.0e-3);
     }
 
     #[test]
