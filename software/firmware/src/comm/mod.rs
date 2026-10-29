@@ -4,6 +4,7 @@
 mod can;
 mod request;
 mod uart;
+pub mod wire;
 
 #[cfg(target_arch = "arm")]
 mod broker;

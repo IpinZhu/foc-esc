@@ -1,0 +1,23 @@
+*
+
+# necessary
+!*/
+!.gitignore
+!.gitattributes
+
+# project
+!*.kicad_pro
+!*.kicad_pcb
+!*.kicad_sch
+
+# library
+!*.kicad_sym
+!*.kicad_mod
+
+# README
+!README.md
+
+# Editor recovery files are not design sources.
+_autosave-*
+~*
+*.lck

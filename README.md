@@ -16,7 +16,7 @@
 - 由定时器触发 ADC，对相电流、VBUS 和 TMP235 温度传感器进行采样。
 - 支持电流 FOC、速度 FOC、开环控制、启动电流偏置校准、SVPWM、遥测和软件故障处理。
 - 带版本和 CRC 的双槽 Flash 参数持久化：上电自动加载，UART `param ...` 命令和 CAN 参数帧可读取、设置、保存或恢复出厂参数。
-- 电机参数自整定（Auto-Tune）：`autotune start` 一键完成 Rs/L/磁链辨识、电流环 PI 计算与阶跃验证、开环同步校验和观测器参数配置，结果保存为带 CRC 的电机参数档案，重启后自动应用。
+- 电机参数自整定（Auto-Tune）：`autotune start` 执行 Rs/L/磁链辨识、电流环 PI 计算与阶跃验证、基于转子传感器的开环同步校验和观测器参数配置，结果保存为带 CRC 的电机参数档案，重启后自动应用。观测器/PLL 阶段目前仅生成与校验参数，尚未实现无感角度估算、HFI 或无感闭环接管。
 - 编译期选择转子传感器：
   - `sensor-encoder`（默认）：TIM3 正交编码器，连接 PB4/PB5。
   - `sensor-hall`：TIM3 Hall 输入捕获，连接 PC6/PC7/PC8。
@@ -39,11 +39,17 @@
 
 固件将高速控制路径与通信路径分离。ADC 帧唤醒电机控制任务；UART 和 CAN 任务通过有界的 Embassy 同步原语交换命令和遥测数据。
 
+上位机的真实设备连接使用 v2 PC 桥接、加密 ESP-NOW 链路和电机端 UART 桥接；连接后需要设备身份握手、控制权申请和心跳。浏览器及桌面模拟器用于界面与会话测试，不是包含真实机械动力学的无感控制仿真。当前没有整机板级联调通过的验证记录。
+
 ## 仓库结构
 
 | 路径 | 用途 |
 |---|---|
 | [`software/firmware`](software/firmware) | Rust/Embassy STM32G473RC 固件 |
+| [`software/foc-sim`](software/foc-sim/README.md) | Rust 主机仿真 M1：有感 FOC 与独立 PMSM 电气/机械模型 |
+| [`software/host-app`](software/host-app/README.md) | Vue + Tauri 上位机；监控、参数管理、控制、自整定入口与录制导出 |
+| [`software/esp32-pc-bridge`](software/esp32-pc-bridge/README.md) | 原生 ESP-IDF / ESP32-C3 串口与 ESP-NOW 桥接；替代旧 PlatformIO 工程 |
+| [`software/foc-wire`](software/foc-wire) | 固件与上位机共享的 `no_std` v2 帧协议、CRC 与控制权租约 |
 | [`hardware/foc-drive/FOC2.kicad_pro`](hardware/foc-drive/FOC2.kicad_pro) | 主驱动板 KiCad 工程 |
 | [`hardware/foc-drive/FOC2.kicad_sch`](hardware/foc-drive/FOC2.kicad_sch) | 主驱动板原理图 |
 | [`hardware/foc-drive/FOC2.kicad_pcb`](hardware/foc-drive/FOC2.kicad_pcb) | 主驱动板 PCB 布局 |
@@ -83,6 +89,10 @@ cargo build --release --bin foc-firmware \
 
 固件 `.cargo/config.toml` 配置了 `thumbv7em-none-eabihf`、`link.x`、`defmt.x` 以及针对 STM32G473RC 的 `probe-rs` 烧录运行器。烧录需要正确连接且获得授权的调试探针；本文档不会执行烧录操作。
 
+## 软件仿真计划
+
+[无感 FOC 软件仿真实施方案](docs/sensorless-simulation-plan.md) 定义了独立 Rust 电机模型、现有固件闭环接入、非理想因素、旁路观测器及无感接管的阶段和验收标准。[主机仿真 M1](software/foc-sim/README.md) 已实现有感物理闭环基线和使用实际转子动力学的自整定参数验证，M2–M5 尚未实施；当前上位机模拟器和自整定流程测试不代表完整的无感物理仿真。
+
 ## 硬件概要
 
 主驱动设计基于以下器件和目标：
@@ -114,4 +124,4 @@ cargo build --release --bin foc-firmware \
 
 ## 许可证和贡献状态
 
-固件 crate 声明采用 `MIT OR Apache-2.0` 许可证。仓库级许可证文件尚未添加。本项目目前仍处于积极的工程开发阶段；在将改动视为可发布版本之前，应结合硬件设计进行审查，并在目标电路板上完成验证。
+固件 crate 声明采用 `MIT OR Apache-2.0` 许可证，仓库根目录的 [`LICENSE`](LICENSE) 为 MIT 许可证。本项目目前仍处于积极的工程开发阶段；在将改动视为可发布版本之前，应结合硬件设计进行审查，并在目标电路板上完成验证。

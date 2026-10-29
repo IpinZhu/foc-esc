@@ -11,6 +11,7 @@ sensor-hall = []
 
 [dependencies]
 libm = "0.2"
+foc-wire = { path = "../foc-wire" }
 
 [target.'cfg(target_arch = "arm")'.dependencies]
 cortex-m = { version = "0.7.6", features = ["inline-asm", "critical-section-single-core"] }

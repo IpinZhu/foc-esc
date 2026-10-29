@@ -1,0 +1,12 @@
+[package]
+name = "device-foc"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+foc-wire = { path = "../../../foc-wire" }
+foc-firmware = { path = "../../../firmware" }
+host-transport = { path = "../host-transport" }
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["rt", "time", "sync", "macros"] }
+getrandom = "0.3"

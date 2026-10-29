@@ -3,6 +3,7 @@
 
 #[cfg(target_arch = "arm")]
 mod firmware {
+    use core::fmt::Write as _;
     use defmt::{info, warn};
     use embassy_executor::Spawner;
     use embassy_futures::select::{Either, select};
@@ -11,8 +12,9 @@ mod firmware {
     use embassy_stm32::gpio::{Input, Pull};
     use embassy_stm32::interrupt;
     use embassy_stm32::interrupt::{InterruptExt, Priority};
+    use embassy_stm32::rng::Rng;
     use embassy_stm32::usart::{Config as UartConfig, Uart};
-    use embassy_time::{Duration, Timer};
+    use embassy_time::{Duration, Instant, Timer};
     use foc_firmware::autotune::{
         AutoTuneConfig, AutoTuneController, AutoTuneState, ControlRequest,
         FastAction,
@@ -28,10 +30,17 @@ mod firmware {
         enable_injected_adc_interrupt, init_injected_adcs, wait_for_adc_frame,
     };
     use foc_firmware::comm::comm_task::{
-        can_receive_task, can_telemetry_task, publish_autotune_status,
-        publish_parameter_response, publish_telemetry, try_receive_command,
-        try_receive_parameter_request, uart_task,
+        AutoTuneAction, TextBuffer, UartRequest, format_autotune_status,
+        format_parameter_response, format_telemetry, parse_uart_request,
     };
+    use foc_firmware::comm::comm_task::{
+        can_receive_task, can_telemetry_task, latest_telemetry,
+        mark_telemetry_unavailable, publish_autotune_status,
+        publish_parameter_response, publish_telemetry, publish_wire_response,
+        try_get_autotune_status, try_receive_command,
+        try_receive_parameter_request, try_receive_wire_request, uart_task,
+    };
+    use foc_firmware::comm::wire::Action as RemoteAction;
     use foc_firmware::comm::{ParameterTransactionCache, TransactionLookup};
     use foc_firmware::control::foc_core::{FocConfig, FocController};
     use foc_firmware::control::foc_math::PhaseDuty;
@@ -45,6 +54,7 @@ mod firmware {
         ParameterStore, SaveOutcome, StoreError,
     };
     use foc_firmware::params::parameters::ParameterProfileV1;
+    use foc_wire::{Frame, HELLO, IDENTITY, REQUEST};
     use {defmt_rtt as _, panic_probe as _};
 
     #[cfg(all(feature = "sensor-encoder", not(feature = "sensor-hall")))]
@@ -248,6 +258,17 @@ mod firmware {
         parameters.replace_working(profile);
     }
 
+    fn abort_tuning(
+        pwm: &mut Tim1PwmBridge<'static>,
+        controller: &mut FocController,
+        autotune: &mut AutoTuneController,
+    ) {
+        autotune.abort_and_drain();
+        controller.handle_command(Command::Disable);
+        pwm.disable();
+        pwm.set_duty(PhaseDuty::DISABLED);
+    }
+
     fn apply_autotune_request(
         controller: &mut FocController,
         request: ControlRequest,
@@ -356,9 +377,11 @@ mod firmware {
         mut flash: Stm32FlashBackend,
         mut parameters: ParameterState,
         mut autotune: AutoTuneController,
+        boot_id: u64,
     ) {
         enable_injected_adc_interrupt();
         let mut controller = FocController::new(config);
+        let mut remote = foc_firmware::comm::wire::Endpoint::new(boot_id);
         let control_period = 1.0 / config.pwm_frequency_hz as f32;
         let telemetry_divider = (config.pwm_frequency_hz / 1_000).max(1);
         let autotune_tick_divider = (config.pwm_frequency_hz / 1_000).max(1);
@@ -368,7 +391,222 @@ mod firmware {
 
         pwm.disable();
         loop {
-            while let Some(command) = try_receive_command() {
+            let now_ms = Instant::now().as_millis();
+            if remote.expire(now_ms) {
+                abort_tuning(&mut pwm, &mut controller, &mut autotune);
+            }
+            if autotune.is_running() {
+                mark_telemetry_unavailable();
+            }
+            if let Some(frame) = try_receive_wire_request() {
+                let now = Instant::now().as_millis();
+                if frame.kind == HELLO {
+                    let mut identity = TextBuffer::<128>::new();
+                    let uid0 = unsafe {
+                        core::ptr::read_volatile(0x1fff_7590 as *const u32)
+                    };
+                    let uid1 = unsafe {
+                        core::ptr::read_volatile(0x1fff_7594 as *const u32)
+                    };
+                    let uid2 = unsafe {
+                        core::ptr::read_volatile(0x1fff_7598 as *const u32)
+                    };
+                    let sensor_name = if cfg!(feature = "sensor-hall") {
+                        "hall"
+                    } else {
+                        "encoder"
+                    };
+                    let _ = write!(
+                        identity,
+                        "model=stm32g473 uid={uid2:08x}{uid1:08x}{uid0:08x} sensor={sensor_name} params=1 lease=500 capabilities=control,params,autotune"
+                    );
+                    let mut reply = Frame::new(
+                        IDENTITY,
+                        frame.session,
+                        identity.as_bytes(),
+                    )
+                    .unwrap();
+                    reply.boot = boot_id;
+                    reply.request = frame.request;
+                    reply.sequence = frame.sequence;
+                    reply.permit = Instant::now().as_millis() as u32;
+                    let _ = publish_wire_response(reply);
+                    continue;
+                }
+                if frame.kind != REQUEST {
+                    continue;
+                }
+                match remote.replay(&frame) {
+                    | Ok(Some(cached)) => {
+                        let _ = publish_wire_response(cached);
+                        continue;
+                    },
+                    | Err(error) => {
+                        let rejected = remote.response(
+                            &frame,
+                            Instant::now().as_millis(),
+                            error.text(),
+                        );
+                        let _ = publish_wire_response(rejected);
+                        continue;
+                    },
+                    | Ok(None) => {},
+                }
+                let text = core::str::from_utf8(frame.data()).unwrap_or("");
+                let parsed = parse_uart_request(text);
+                let action = match text {
+                    | "claim" => RemoteAction::Claim,
+                    | "heartbeat" => RemoteAction::Heartbeat,
+                    | "release" => RemoteAction::Release,
+                    | "disable" => RemoteAction::Disable,
+                    | _ => match parsed {
+                        | Ok(UartRequest::Status)
+                        | Ok(UartRequest::AutoTune(AutoTuneAction::Status))
+                        | Ok(UartRequest::Parameter(
+                            ParameterAction::Get(_) | ParameterAction::Status,
+                        )) => RemoteAction::ReadOnly,
+                        | Ok(_) => RemoteAction::Mutate,
+                        | Err(_) => RemoteAction::Mutate,
+                    },
+                };
+                let can_claim = controller.state() == MotorState::Idle
+                    && !pwm.is_enabled()
+                    && !autotune.is_running();
+                let mut output = TextBuffer::<256>::new();
+                let result = remote.authorize(&frame, now, action, can_claim);
+                if let Err(error) = result {
+                    let _ = output.write_str(
+                        core::str::from_utf8(error.text())
+                            .unwrap_or("rejected"),
+                    );
+                } else if action == RemoteAction::Mutate
+                    && autotune.is_running()
+                    && text != "autotune stop"
+                    && text != "disable"
+                {
+                    let _ = output.write_str("rejected autotune-busy");
+                } else if matches!(
+                    action,
+                    RemoteAction::Claim | RemoteAction::Heartbeat
+                ) {
+                    let _ = output.write_str("applied");
+                } else if matches!(
+                    action,
+                    RemoteAction::Release | RemoteAction::Disable
+                ) {
+                    abort_tuning(&mut pwm, &mut controller, &mut autotune);
+                    if action == RemoteAction::Release {
+                        remote.release();
+                    }
+                    let _ =
+                        output.write_str(if action == RemoteAction::Release {
+                            "released"
+                        } else {
+                            "applied"
+                        });
+                } else {
+                    match parsed {
+                        | Ok(UartRequest::Command(command)) => {
+                            let accepted = controller.handle_command(command);
+                            synchronize_legacy_parameters(
+                                command,
+                                accepted,
+                                &controller,
+                                &mut parameters,
+                            );
+                            let _ = output.write_str(if accepted {
+                                "applied"
+                            } else {
+                                "rejected command"
+                            });
+                        },
+                        | Ok(UartRequest::AutoTune(AutoTuneAction::Start)) => {
+                            if can_claim {
+                                let seed = MotorParam::from_foc_config(
+                                    &controller.config(),
+                                );
+                                autotune = AutoTuneController::new(
+                                    AutoTuneConfig::from_foc_config(
+                                        &controller.config(),
+                                    ),
+                                );
+                                let _ =
+                                    output.write_str(if autotune.start(seed) {
+                                        "accepted"
+                                    } else {
+                                        "rejected autotune"
+                                    });
+                            } else {
+                                let _ = output.write_str("rejected busy");
+                            }
+                        },
+                        | Ok(UartRequest::AutoTune(AutoTuneAction::Stop)) => {
+                            abort_tuning(
+                                &mut pwm,
+                                &mut controller,
+                                &mut autotune,
+                            );
+                            let _ = output.write_str("applied");
+                        },
+                        | Ok(UartRequest::Status) => {
+                            if let Some(telemetry) = latest_telemetry() {
+                                let _ =
+                                    format_telemetry(&telemetry, &mut output);
+                            } else {
+                                let _ = output.write_str("not-ready");
+                            }
+                        },
+                        | Ok(UartRequest::AutoTune(AutoTuneAction::Status)) => {
+                            let _ = format_autotune_status(
+                                try_get_autotune_status(),
+                                &mut output,
+                            );
+                        },
+                        | Ok(UartRequest::Parameter(action)) => {
+                            let request = ParameterRequest {
+                                route: foc_firmware::interfaces::ParameterRoute::Uart,
+                                action,
+                            };
+                            let response = process_parameter_request(
+                                request,
+                                &mut pwm,
+                                &mut controller,
+                                &mut flash,
+                                &mut parameters,
+                            );
+                            let _ = format_parameter_response(
+                                &response,
+                                &mut output,
+                            );
+                        },
+                        | _ => {
+                            let _ = output.write_str("rejected malformed");
+                        },
+                    }
+                }
+                let bytes = output
+                    .as_bytes()
+                    .strip_suffix(b"\r\n")
+                    .unwrap_or(output.as_bytes());
+                let reply =
+                    remote.response(&frame, Instant::now().as_millis(), bytes);
+                if action != RemoteAction::Release {
+                    remote.remember(frame, reply);
+                }
+                let _ = publish_wire_response(reply);
+            }
+            for _ in 0..4 {
+                let Some(command) = try_receive_command() else {
+                    break;
+                };
+                if remote.remote_mode()
+                    && !matches!(
+                        command,
+                        Command::Disable | Command::AutoTuneStop
+                    )
+                {
+                    continue;
+                }
                 match command {
                     | Command::AutoTuneStart => {
                         if controller.state() == MotorState::Idle
@@ -393,9 +631,9 @@ mod firmware {
                             );
                         }
                     },
-                    | Command::AutoTuneStop => {
-                        autotune.stop();
-                        info!("auto-tune stop requested");
+                    | Command::AutoTuneStop | Command::Disable => {
+                        abort_tuning(&mut pwm, &mut controller, &mut autotune);
+                        info!("auto-tune/disable abort requested");
                     },
                     | _ => {
                         let accepted = controller.handle_command(command);
@@ -409,8 +647,26 @@ mod firmware {
                 }
             }
 
-            while let Some(envelope) = try_receive_parameter_request() {
+            for _ in 0..4 {
+                let Some(envelope) = try_receive_parameter_request() else {
+                    break;
+                };
                 let request = envelope.request();
+                if remote.remote_mode()
+                    && !matches!(
+                        request.action,
+                        ParameterAction::Get(_) | ParameterAction::Status
+                    )
+                {
+                    let _ = publish_parameter_response(ParameterResponse {
+                        route: request.route,
+                        action: request.action,
+                        result: ParameterResultCode::Busy,
+                        value: None,
+                        storage: parameters.status(),
+                    });
+                    continue;
+                }
                 let response = match parameter_transactions.lookup(envelope) {
                     | TransactionLookup::Replay(response) => response,
                     | TransactionLookup::Conflict => ParameterResponse {
@@ -444,7 +700,7 @@ mod firmware {
                 | Either::First(frame) => frame,
                 | Either::Second(_) => {
                     controller.handle_command(Command::ReportControlOverrun);
-                    pwm.disable();
+                    abort_tuning(&mut pwm, &mut controller, &mut autotune);
                     continue;
                 },
             };
@@ -548,6 +804,7 @@ mod firmware {
         let mut config = Config::default();
         {
             use embassy_stm32::rcc::*;
+            config.rcc.hsi48 = Some(Hsi48Config::new());
             config.rcc.pll = Some(Pll {
                 source: PllSource::Hsi,
                 prediv: PllPreDiv::Div4,
@@ -562,6 +819,8 @@ mod firmware {
             config.rcc.sys = Sysclk::Pll1R;
         }
         let p = embassy_stm32::init(config);
+        let mut rng = Rng::new(p.RNG, BoardIrqs);
+        let boot_id = rng.next_u64().max(1);
 
         let mut flash = Stm32FlashBackend::new(p.FLASH);
         let stored_parameters = {
@@ -620,6 +879,7 @@ mod firmware {
         interrupt::DMA1_CHANNEL2.set_priority(Priority::P6);
         interrupt::FDCAN1_IT0.set_priority(Priority::P6);
         interrupt::FDCAN1_IT1.set_priority(Priority::P6);
+        interrupt::RNG.set_priority(Priority::P6);
 
         let _software_break_only = Input::new(p.PA6, Pull::Down);
         let pwm = Tim1PwmBridge::new(
@@ -686,6 +946,7 @@ mod firmware {
                 flash,
                 parameter_state,
                 AutoTuneController::new(AutoTuneConfig::default()),
+                boot_id,
             )
             .unwrap(),
         );

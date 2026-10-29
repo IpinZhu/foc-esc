@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/host-core", "crates/host-transport", "crates/device-foc", "src-tauri"]
+resolver = "2"
