@@ -9,7 +9,9 @@ use embassy_stm32::adc::{
     Adc, AdcChannel as _, Exten, InjectedAdc, InjectedAdcTrigger, SampleTime,
 };
 use embassy_stm32::can;
-use embassy_stm32::gpio::{OutputType, Pull};
+use embassy_stm32::gpio::OutputType;
+#[cfg(not(feature = "sensorless"))]
+use embassy_stm32::gpio::Pull;
 use embassy_stm32::interrupt::typelevel::{ADC1_2, Interrupt};
 use embassy_stm32::pac;
 use embassy_stm32::pac::adc::Adc as AdcRegisters;
@@ -37,11 +39,15 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use static_cell::StaticCell;
 
-use crate::bsp::hardware::{PwmBridge, RotorSensor};
+use crate::bsp::hardware::PwmBridge;
+#[cfg(not(feature = "sensorless"))]
+use crate::bsp::hardware::RotorSensor;
 use crate::control::foc_math::PhaseDuty;
 #[cfg(feature = "sensor-hall")]
 use crate::control::foc_math::normalize_angle;
-use crate::interfaces::{RawAdcFrame, RotorSample};
+use crate::interfaces::RawAdcFrame;
+#[cfg(not(feature = "sensorless"))]
+use crate::interfaces::RotorSample;
 
 pub const TIMER_CLOCK_HZ: u32 = crate::timing::TIMER_CLOCK_HZ;
 pub const PWM_FREQUENCY_HZ: u32 = crate::timing::PWM_FREQUENCY_HZ;

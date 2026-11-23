@@ -20,7 +20,9 @@ mod firmware {
         FastAction,
     };
     use foc_firmware::bsp::flash::Stm32FlashBackend;
-    use foc_firmware::bsp::hardware::{PwmBridge, RotorSensor};
+    use foc_firmware::bsp::hardware::PwmBridge;
+    #[cfg(not(feature = "sensorless"))]
+    use foc_firmware::bsp::hardware::RotorSensor;
     #[cfg(all(feature = "sensor-encoder", not(feature = "sensor-hall")))]
     use foc_firmware::bsp::stm32::EncoderSensor;
     #[cfg(all(feature = "sensor-hall", not(feature = "sensor-encoder")))]
@@ -61,6 +63,9 @@ mod firmware {
     type SelectedSensor = EncoderSensor<'static>;
     #[cfg(all(feature = "sensor-hall", not(feature = "sensor-encoder")))]
     type SelectedSensor = HallSensor<'static>;
+
+    #[cfg(feature = "sensorless")]
+    type SelectedSensor = Option<MotorParam>;
 
     fn store_result_code<E>(error: StoreError<E>) -> ParameterResultCode {
         match error {
@@ -365,14 +370,10 @@ mod firmware {
         }
     }
 
-    #[cfg(any(
-        all(feature = "sensor-encoder", not(feature = "sensor-hall")),
-        all(feature = "sensor-hall", not(feature = "sensor-encoder"))
-    ))]
     #[embassy_executor::task]
     async fn motor_control_task(
         mut pwm: Tim1PwmBridge<'static>,
-        mut sensor: SelectedSensor,
+        sensor: SelectedSensor,
         config: FocConfig,
         mut flash: Stm32FlashBackend,
         mut parameters: ParameterState,
@@ -380,7 +381,11 @@ mod firmware {
         boot_id: u64,
     ) {
         enable_injected_adc_interrupt();
-        let mut controller = FocController::new(config);
+        #[cfg(not(feature = "sensorless"))]
+        let (mut sensor, mut controller) = (sensor, FocController::new(config));
+        #[cfg(feature = "sensorless")]
+        let mut controller =
+            FocController::new_sensorless(config, sensor.as_ref());
         let mut remote = foc_firmware::comm::wire::Endpoint::new(boot_id);
         let control_period = 1.0 / config.pwm_frequency_hz as f32;
         let telemetry_divider = (config.pwm_frequency_hz / 1_000).max(1);
@@ -411,14 +416,21 @@ mod firmware {
                     let uid2 = unsafe {
                         core::ptr::read_volatile(0x1fff_7598 as *const u32)
                     };
-                    let sensor_name = if cfg!(feature = "sensor-hall") {
+                    let sensor_name = if cfg!(feature = "sensorless") {
+                        "sensorless"
+                    } else if cfg!(feature = "sensor-hall") {
                         "hall"
                     } else {
                         "encoder"
                     };
+                    let caps = if cfg!(feature = "sensorless") {
+                        "control,params"
+                    } else {
+                        "control,params,autotune"
+                    };
                     let _ = write!(
                         identity,
-                        "model=stm32g473 uid={uid2:08x}{uid1:08x}{uid0:08x} sensor={sensor_name} params=1 lease=500 capabilities=control,params,autotune"
+                        "model=stm32g473 uid={uid2:08x}{uid1:08x}{uid0:08x} sensor={sensor_name} params=1 lease=500 capabilities={caps}"
                     );
                     let mut reply = Frame::new(
                         IDENTITY,
@@ -521,7 +533,11 @@ mod firmware {
                             });
                         },
                         | Ok(UartRequest::AutoTune(AutoTuneAction::Start)) => {
-                            if can_claim {
+                            if cfg!(feature = "sensorless") {
+                                let _ = output.write_str(
+                                    "rejected requires rotor sensor",
+                                );
+                            } else if can_claim {
                                 let seed = MotorParam::from_foc_config(
                                     &controller.config(),
                                 );
@@ -609,7 +625,8 @@ mod firmware {
                 }
                 match command {
                     | Command::AutoTuneStart => {
-                        if controller.state() == MotorState::Idle
+                        if !cfg!(feature = "sensorless")
+                            && controller.state() == MotorState::Idle
                             && !pwm.is_enabled()
                             && !autotune.is_running()
                         {
@@ -705,7 +722,10 @@ mod firmware {
                 },
             };
 
+            #[cfg(not(feature = "sensorless"))]
             let rotor = sensor.sample(control_period);
+            #[cfg(feature = "sensorless")]
+            let rotor = Default::default();
 
             if autotune.is_running() {
                 match autotune.fast_step(&raw) {
@@ -795,10 +815,6 @@ mod firmware {
         }
     }
 
-    #[cfg(any(
-        all(feature = "sensor-encoder", not(feature = "sensor-hall")),
-        all(feature = "sensor-hall", not(feature = "sensor-encoder"))
-    ))]
     #[embassy_executor::main]
     async fn main(spawner: Spawner) {
         let mut config = Config::default();
@@ -867,7 +883,9 @@ mod firmware {
                 warn!("motor record not commissioned; ignored");
             },
             | None => {
-                info!("no commissioned motor record; run auto-tune");
+                info!(
+                    "no commissioned motor record; commission with a rotor sensor first"
+                );
             },
         }
         working_parameters.apply_boot(&mut foc_config);
@@ -906,6 +924,9 @@ mod firmware {
         #[cfg(all(feature = "sensor-hall", not(feature = "sensor-encoder")))]
         let sensor =
             HallSensor::new(p.TIM3, p.PC6, p.PC7, p.PC8, foc_config.pole_pairs);
+
+        #[cfg(feature = "sensorless")]
+        let sensor = motor_stored.map(|s| s.profile);
 
         let mut uart_config = UartConfig::default();
         uart_config.baudrate = 115_200;
