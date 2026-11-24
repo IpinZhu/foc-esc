@@ -1,8 +1,10 @@
+use crate::control::feedback::Feedback;
 use crate::control::foc_math::{
     Dq, PhaseCurrents, PhaseDuty, clarke, inverse_park, normalize_angle, park,
     svpwm,
 };
 use crate::control::pid::{PidConfig, PidController};
+use crate::control::sensorless::Stage;
 use crate::interfaces::{
     Command, ControlMode, ControlOutput, FaultFlags, MotorState, RawAdcFrame,
     RotorSample, Telemetry,
@@ -131,6 +133,7 @@ impl OffsetCalibrator {
 }
 
 pub struct FocController {
+    feedback: Feedback,
     config: FocConfig,
     state: MotorState,
     faults: FaultFlags,
@@ -164,6 +167,7 @@ impl FocController {
             / config.speed_loop_frequency_hz.max(1))
         .max(1);
         Self {
+            feedback: Feedback::Physical,
             state: MotorState::Calibrating,
             faults: FaultFlags::empty(),
             offsets: [0.0; 3],
@@ -192,6 +196,29 @@ impl FocController {
         }
     }
 
+    /// Fail closed without a compatible commissioned motor record. There is
+    /// deliberately no fallback to an encoder, open-loop voltage or seed.
+    pub fn new_sensorless(
+        config: FocConfig,
+        motor: Option<&MotorParam>,
+    ) -> Self {
+        let mut this = Self::new(config);
+        this.feedback = Feedback::sensorless(config, motor);
+        this
+    }
+    pub fn sensorless_stage(&self) -> Option<Stage> {
+        if self.bridge_requested() {
+            self.feedback.stage()
+        } else {
+            None
+        }
+    }
+    fn target_allowed(&self, mode: ControlMode, target: f32) -> bool {
+        self.feedback.physical()
+            || !self.bridge_requested()
+            || (self.state == MotorState::Running(mode)
+                && self.feedback.accepts_target(mode, target))
+    }
     pub fn state(&self) -> MotorState {
         self.state
     }
@@ -260,7 +287,10 @@ impl FocController {
     /// separately; the shared `config.current_pid` keeps the q-axis values
     /// as the representative set.
     pub fn apply_motor_param(&mut self, param: &MotorParam) -> bool {
-        if !self.storage_safe() || param.validate().is_err() {
+        if !self.feedback.physical()
+            || !self.storage_safe()
+            || param.validate().is_err()
+        {
             return false;
         }
         let mut d_config = self.config.current_pid;
@@ -316,14 +346,36 @@ impl FocController {
                 self.try_enable(mode);
                 was_idle && self.state == MotorState::Running(mode)
             },
-            | Command::SetIq(iq) if iq.is_finite() => {
+            | Command::SetIq(0.0)
+                if !self.feedback.physical()
+                    && self.state
+                        == MotorState::Running(ControlMode::Current) =>
+            {
+                self.enter_idle();
+                true
+            },
+            | Command::SetVelocity(0.0)
+                if !self.feedback.physical()
+                    && self.state
+                        == MotorState::Running(ControlMode::Velocity) =>
+            {
+                self.enter_idle();
+                true
+            },
+            | Command::SetIq(iq)
+                if iq.is_finite()
+                    && self.target_allowed(ControlMode::Current, iq) =>
+            {
                 self.target_iq = iq.clamp(
                     -self.config.current_limit,
                     self.config.current_limit,
                 );
                 true
             },
-            | Command::SetVelocity(velocity) if velocity.is_finite() => {
+            | Command::SetVelocity(velocity)
+                if velocity.is_finite()
+                    && self.target_allowed(ControlMode::Velocity, velocity) =>
+            {
                 self.target_velocity = velocity.clamp(
                     -self.config.maximum_velocity,
                     self.config.maximum_velocity,
@@ -381,6 +433,11 @@ impl FocController {
         raw: RawAdcFrame,
         rotor: RotorSample,
     ) -> ControlOutput {
+        let mut rotor = if self.feedback.physical() {
+            rotor
+        } else {
+            RotorSample::default()
+        };
         let dt = 1.0 / self.config.pwm_frequency_hz as f32;
         self.check_sequence(raw.sequence);
         if raw.overrun {
@@ -422,6 +479,21 @@ impl FocController {
         self.bus_current_average +=
             filter_alpha * (bus_current - self.bus_current_average);
         self.update_thermal(currents, dt, sensor_temperature);
+        let stationary = clarke(currents);
+        let mut guidance = None;
+        if self.bridge_requested() && !self.feedback.physical() {
+            if let Some((sample, g)) = self.feedback.update(
+                stationary,
+                bus_voltage,
+                self.last_duty,
+                self.config.maximum_velocity,
+            ) {
+                rotor = sample;
+                guidance = Some(g);
+            } else {
+                self.trip(FaultFlags::SENSOR);
+            }
+        }
         self.run_protections(currents, bus_voltage, rotor, dt);
 
         if self.state == MotorState::Fault || self.state == MotorState::Idle {
@@ -449,6 +521,7 @@ impl FocController {
                 );
                 self.open_loop_angle
             },
+            | _ if let Some(g) = guidance => g.angle,
             | _ => normalize_angle(
                 self.config.sensor_direction
                     * self.config.pole_pairs as f32
@@ -456,7 +529,7 @@ impl FocController {
                     - self.config.electrical_zero,
             ),
         };
-        let current_dq = park(clarke(currents), electrical_angle);
+        let current_dq = park(stationary, electrical_angle);
         let voltage_dq = match mode {
             | ControlMode::OpenLoop => Dq {
                 d: 0.0,
@@ -464,20 +537,36 @@ impl FocController {
                     .open_loop_q_voltage
                     .clamp(-0.5 * bus_voltage, 0.5 * bus_voltage),
             },
-            | ControlMode::Current => self.run_current_loop(
-                current_dq,
-                self.target_iq,
-                bus_voltage,
-                dt,
-            ),
-            | ControlMode::Velocity => {
-                self.run_speed_loop(rotor.mechanical_velocity);
-                self.run_current_loop(
-                    current_dq,
-                    self.target_iq,
-                    bus_voltage,
-                    dt,
-                )
+            | ControlMode::Current | ControlMode::Velocity => {
+                if mode == ControlMode::Velocity
+                    && guidance.is_none_or(|g| g.closed)
+                {
+                    let reference =
+                        self.feedback.velocity_reference(self.target_velocity);
+                    self.run_speed_loop(rotor.mechanical_velocity, reference);
+                }
+                let limit = self.derated_current_limit();
+                let desired_q = self.target_iq.clamp(-limit, limit);
+                let target = guidance.map_or(
+                    Dq {
+                        d: 0.0,
+                        q: desired_q,
+                    },
+                    |g| {
+                        // Align/drag with a bounded rotating d-axis current; do
+                        // not run the speed PI against unqualified feedback.
+                        let startup = (0.2 * limit).min(1.0);
+                        g.current_target(
+                            desired_q,
+                            if mode == ControlMode::Current {
+                                startup.min(desired_q.abs())
+                            } else {
+                                startup
+                            },
+                        )
+                    },
+                );
+                self.run_current_loop(current_dq, target, bus_voltage, dt)
             },
             | ControlMode::Idle => Dq::default(),
         };
@@ -509,13 +598,22 @@ impl FocController {
         }
         let bus_voltage = self.last_telemetry.bus_voltage;
         let (minimum, maximum) = self.bus_limits();
-        let needs_sensor =
-            matches!(mode, ControlMode::Current | ControlMode::Velocity);
-        if bus_voltage < minimum
-            || bus_voltage > maximum
-            || (needs_sensor && !self.last_telemetry.sensor_valid)
+        if bus_voltage < minimum || bus_voltage > maximum {
+            return;
+        }
+        let target = if mode == ControlMode::Velocity {
+            self.target_velocity
+        } else {
+            self.target_iq
+        };
+        if !self
+            .feedback
+            .start(mode, target, self.last_telemetry.sensor_valid)
         {
             return;
+        }
+        if !self.feedback.physical() && mode == ControlMode::Velocity {
+            self.target_iq = 0.0;
         }
         self.reset_loops();
         self.open_loop_angle = if self.last_telemetry.sensor_valid {
@@ -532,6 +630,10 @@ impl FocController {
     }
 
     fn enter_idle(&mut self) {
+        if !self.feedback.physical() {
+            self.target_velocity = 0.0;
+            self.target_iq = 0.0;
+        }
         if !matches!(self.state, MotorState::Calibrating | MotorState::Fault) {
             self.state = MotorState::Idle;
         }
@@ -550,23 +652,22 @@ impl FocController {
     fn run_current_loop(
         &mut self,
         measured: Dq,
-        iq_target: f32,
+        target: Dq,
         bus_voltage: f32,
         dt: f32,
     ) -> Dq {
         let voltage_limit = 0.5 * bus_voltage.max(0.0);
+        let voltage_limit = self.feedback.axis_voltage_limit(voltage_limit);
         self.current_d_pid.set_output_limit(voltage_limit);
         self.current_q_pid.set_output_limit(voltage_limit);
-        let iq_limit = self.derated_current_limit();
+
         Dq {
-            d: self.current_d_pid.update(-measured.d, dt),
-            q: self
-                .current_q_pid
-                .update(iq_target.clamp(-iq_limit, iq_limit) - measured.q, dt),
+            d: self.current_d_pid.update(target.d - measured.d, dt),
+            q: self.current_q_pid.update(target.q - measured.q, dt),
         }
     }
 
-    fn run_speed_loop(&mut self, measured_velocity: f32) {
+    fn run_speed_loop(&mut self, measured_velocity: f32, reference: f32) {
         self.speed_counter += 1;
         if self.speed_counter < self.speed_divider {
             return;
@@ -576,9 +677,8 @@ impl FocController {
             self.speed_divider as f32 / self.config.pwm_frequency_hz as f32;
         self.velocity_pid
             .set_output_limit(self.derated_current_limit());
-        self.target_iq = self
-            .velocity_pid
-            .update(self.target_velocity - measured_velocity, dt);
+        self.target_iq =
+            self.velocity_pid.update(reference - measured_velocity, dt);
 
         let stalled = self.target_velocity.abs()
             >= self.config.stall_target_velocity
@@ -636,10 +736,11 @@ impl FocController {
                 self.trip(FaultFlags::OVER_VOLTAGE);
             }
 
-            let sensor_required = !matches!(
-                self.state,
-                MotorState::Running(ControlMode::OpenLoop)
-            );
+            let sensor_required = self.feedback.physical()
+                && !matches!(
+                    self.state,
+                    MotorState::Running(ControlMode::OpenLoop)
+                );
             if sensor_required && !rotor.valid {
                 self.sensor_invalid_count =
                     self.sensor_invalid_count.saturating_add(1);
@@ -679,18 +780,18 @@ impl FocController {
     }
 
     fn derated_current_limit(&self) -> f32 {
+        let limit = self.feedback.current_limit(self.config.current_limit);
         if self.junction_temperature <= self.config.derate_temperature {
-            return self.config.current_limit;
+            return limit;
         }
         let span =
             self.config.shutdown_temperature - self.config.derate_temperature;
         if span <= 0.0 {
             return 0.0;
         }
-        (self.config.current_limit
-            * (self.config.shutdown_temperature - self.junction_temperature)
+        (limit * (self.config.shutdown_temperature - self.junction_temperature)
             / span)
-            .clamp(0.0, self.config.current_limit)
+            .clamp(0.0, limit)
     }
 
     fn raw_to_currents(&self, raw: RawAdcFrame) -> PhaseCurrents {
@@ -767,6 +868,10 @@ impl FocController {
     }
 
     fn trip(&mut self, fault: FaultFlags) {
+        if !self.feedback.physical() {
+            self.target_velocity = 0.0;
+            self.target_iq = 0.0;
+        }
         self.faults.insert(fault);
         self.state = MotorState::Fault;
         self.last_duty = PhaseDuty::DISABLED;

@@ -8,6 +8,7 @@ edition = "2024"
 default = ["sensor-encoder"]
 sensor-encoder = []
 sensor-hall = []
+sensorless = []
 
 [dependencies]
 libm = "0.2"

@@ -1403,9 +1403,8 @@ impl AutoTuneController {
         let bandwidth =
             core::f32::consts::TAU * self.config.observer_bandwidth_hz;
         self.motor.observer_bandwidth = bandwidth;
-        // Normalized back-EMF observer gain convention: the correction term
-        // is scaled by flux * omega_o. Finalized together with the future
-        // observer module.
+        // Retained in the v1 record; the filtered voltage-model backend
+        // derives its discrete filter coefficient from bandwidth and dt.
         self.motor.observer_gain = bandwidth * self.motor.flux;
         self.motor.pll_kp = 2.0 * bandwidth;
         self.motor.pll_ki = bandwidth * bandwidth;
@@ -1414,9 +1413,7 @@ impl AutoTuneController {
     }
 
     fn tick_observer_verify(&mut self) {
-        // Parameter-level verification until the sensorless observer module
-        // lands: all observer quantities must be finite and positive where
-        // applicable, and the full parameter set must validate.
+        // Commissioning verifies parameters, not actual sensorless lock.
         let sane = self.motor.observer_bandwidth > 0.0
             && self.motor.observer_gain > 0.0
             && self.motor.pll_kp > 0.0

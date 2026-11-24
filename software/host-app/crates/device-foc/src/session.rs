@@ -62,10 +62,14 @@ impl Session {
                         .identity
                         .split_ascii_whitespace()
                         .any(|p| p == "params=1")
-                    || !snapshot
-                        .identity
-                        .split_ascii_whitespace()
-                        .any(|p| p == "capabilities=control,params,autotune")
+                    || !snapshot.identity.split_ascii_whitespace().any(|p| {
+                        p == "capabilities=control,params,autotune"
+                            || (p == "capabilities=control,params"
+                                && snapshot
+                                    .identity
+                                    .split_ascii_whitespace()
+                                    .any(|tag| tag == "sensor=sensorless"))
+                    })
                     || serial.boot == 0
                 {
                     return Err("设备身份或安全协议能力不匹配".into());
