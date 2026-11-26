@@ -13,3 +13,4 @@ serde = { version = "1", features = ["derive"] }
 device-foc = { path = "../crates/device-foc" }
 tokio = { version = "1", features = ["sync"] }
 host-transport = { path = "../crates/host-transport" }
+chrono = "0.4"
