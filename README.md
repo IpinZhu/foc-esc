@@ -63,30 +63,23 @@
 
 ## 构建和测试
 
-以下命令均从 `software/firmware` 目录执行。由于固件的默认 Cargo 目标是 `thumbv7em-none-eabihf`，主机测试必须显式指定主机目标。
+Windows、Linux、macOS 共用标准库 Python 构建后端，提供 PowerShell 和 Bash 入口。ESP-IDF、编译工具、Python 依赖和缓存默认放在工程 `.tools/`，不修改全局环境。完整步骤见 [STM32 工具说明](software/firmware/README.md) 和 [ESP32 工具说明](software/esp32-pc-bridge/README.md)。
 
-### 主机测试和 lint
+以下分别在对应固件目录执行：
 
-```bash
-cargo fmt -- --check
-cargo test --target x86_64-pc-windows-msvc
-cargo clippy --target x86_64-pc-windows-msvc --test fault_protection --test fault_recovery_and_diagnostics -- -D warnings
-```
+| 操作 | Linux / macOS | Windows PowerShell |
+|---|---|---|
+| STM32 编码器构建 | `bash ./build.sh --sensor encoder` | `.\build.ps1 -Sensor encoder` |
+| STM32 Hall 构建 | `bash ./build.sh --sensor hall` | `.\build.ps1 -Sensor hall` |
+| STM32 无感构建 | `bash ./build.sh --sensor sensorless` | `.\build.ps1 -Sensor sensorless` |
+| STM32 本机测试 | `bash ./build.sh --action test` | `.\build.ps1 -Action test` |
+| ESP32 本地 SDK 安装 | `bash ./setup.sh` | `.\setup.ps1` |
+| ESP32 PC 角色构建 | `bash ./build.sh --variant pc` | `.\build.ps1 -Variant pc` |
+| ESP32 电机角色构建 | `bash ./build.sh --variant motor` | `.\build.ps1 -Variant motor` |
 
-故障诊断集成测试位于 `software/firmware/tests/`，会使用主机仿真的 ADC 帧和转子采样，不会驱动真实 PWM 或功率级。
+普通构建不接触硬件。烧录是单独显式操作，STM32 必须指定 probe，ESP32 必须指定串口；具体命令见各工具说明。STM32 各传感器产物独立，脚本检查 ELF 应用区并禁止整片擦除路径，保留切换无感所需的参数页。
 
-### Encoder 固件
-
-```bash
-cargo build --bin foc-firmware
-```
-
-### Hall 固件
-
-```bash
-cargo build --release --bin foc-firmware \
-  --no-default-features --features sensor-hall
-```
+脚本从 STM32 固件目录加载 Cargo 配置，本机测试目标自动检测，不再硬编码 Windows target。保留原生 Cargo 操作时，从仓库根目录构建必须明确加载 `software/firmware/.cargo/config.toml`，只传 `--manifest-path` 不足以保证加载链接脚本。
 
 ### 实验性无感固件
 

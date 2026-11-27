@@ -1,0 +1,73 @@
+name: Firmware tooling
+
+on:
+  push:
+    paths: ['software/firmware/**', 'software/esp32-pc-bridge/**', 'software/foc-wire/**', 'software/foc-sim/**', '.github/workflows/firmware.yml']
+  pull_request:
+    paths: ['software/firmware/**', 'software/esp32-pc-bridge/**', 'software/foc-wire/**', 'software/foc-sim/**', '.github/workflows/firmware.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Select Rust using the runner's existing rustup
+        run: |
+          rustup toolchain install 1.93.1 --profile minimal --component rustfmt --component clippy --target thumbv7em-none-eabihf
+          rustup override set 1.93.1
+      - name: Portable driver and wrapper tests (mock flashing only)
+        run: |
+          python -I software/esp32-pc-bridge/tools/test_build_scripts.py
+          python -I software/firmware/tools/test_firmware.py
+      - name: Native bridge protocol tests (no SDK or hardware)
+        run: python -I software/esp32-pc-bridge/tools/idf_driver.py --action test
+      - name: Rust formatting
+        run: python -I software/firmware/tools/firmware.py --action fmt
+      - name: Build and test all STM32 variants
+        run: |
+          for sensor in encoder hall sensorless; do
+            python -I software/firmware/tools/firmware.py --sensor "$sensor" --action build
+            python -I software/firmware/tools/firmware.py --sensor "$sensor" --action test
+            python -I software/firmware/tools/firmware.py --sensor "$sensor" --action clippy
+            python -I software/firmware/tools/firmware.py --sensor "$sensor" --action host-clippy
+          done
+      - name: Physical sensorless regression (no board)
+        run: |
+          host=$(rustc -vV | sed -n 's/^host: //p')
+          cargo test --locked --manifest-path software/foc-sim/Cargo.toml --target "$host" --release --test sensorless
+
+  esp32:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install project-local ESP-IDF and tools
+        run: bash software/esp32-pc-bridge/setup.sh --python "$(command -v python)"
+      - name: Compile both v2 roles without secrets (not operational radio configurations)
+        run: |
+          bash software/esp32-pc-bridge/build.sh --variant pc
+          bash software/esp32-pc-bridge/build.sh --variant motor
+      # Deliberately do not upload SDK/config/bin artifacts; local configs can embed control keys.
