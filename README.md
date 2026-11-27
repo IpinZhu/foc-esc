@@ -1,67 +1,68 @@
 # STM32G473 三相 FOC 驱动器
 
-这是一个基于 STM32G473RC 的实验性三相 PMSM/BLDC 电机控制平台。仓库包含驱动板设计，以及使用 Rust 2024 + Embassy 实现的电流控制型磁场定向控制（FOC）固件。
+基于 **STM32G473RC** 的实验性三相 PMSM/BLDC 磁场定向控制（FOC）平台。仓库涵盖主驱动板与扩展板 KiCad 硬件设计、Rust 2024 + Embassy 实时固件、物理闭环仿真器、ESP32-C3 加密无线桥接以及 Tauri 桌面调试上位机。
 
-> **安全提示：** 这是一个大电流电力电子原型。固件和 PCB 尚未完成生产级电气鉴定或验证。在使用合适的实验设备和限流措施检查栅极波形、死区时间、电流采样极性、ADC 时序、故障响应、绝缘/间距和热性能之前，不要连接电机或电池。
+> **安全提示：** 本项目为大电流电力电子工程原型，固件与 PCB **尚未完成板级电气、热性能、EMI 及故障关断鉴定**。在通过限流电源与示波器验证栅极波形、死区时间、采样极性、ADC 时序和保护动作前，请勿连接电机或电池。当前固件仅启用**纯软件保护**（未启用 `COMP → DAC → TIM1-BRK` 硬件过流链），软件停用不能替代硬件急停。
 
-## 当前实现
+---
 
-当前固件位于 [`software/firmware`](software/firmware)，目标芯片为 STM32G473RC：
+## 模块总览与当前状态
 
-- TIM1 中心对齐互补 PWM，输出引脚为 PA8/PA9/PA10 和 PB13/PB14/PB15。
-- 配置的 PWM 频率：**100 kHz**。
-- 配置的死区时间：在 170 MHz 定时器时钟下为 **200 ns**。
-- 占空比范围：5%–95%。
-- 通过 INA240A2 放大器和 0.5 mΩ 分流电阻进行三相电流反馈。
-- 由定时器触发 ADC，对相电流、VBUS 和 TMP235 温度传感器进行采样。
-- 支持电流 FOC、速度 FOC、开环控制、启动电流偏置校准、SVPWM、遥测和软件故障处理。
-- 带版本和 CRC 的双槽 Flash 参数持久化：上电自动加载，UART `param ...` 命令和 CAN 参数帧可读取、设置、保存或恢复出厂参数。
-- 电机参数自整定（Auto-Tune）：`autotune start` 执行 Rs/L/磁链辨识、电流环 PI 计算与阶跃验证、基于转子传感器的开环同步校验和观测器参数配置，结果保存为带 CRC 的电机参数档案，重启后自动应用。整定阶段只生成与校验参数，并不试运行无感控制。
-- 编译期选择角度反馈来源（三选一）：
-  - `sensor-encoder`（默认）：TIM3 正交编码器，连接 PB4/PB5。
-  - `sensor-hall`：TIM3 Hall 输入捕获，连接 PC6/PC7/PC8。
-  - `sensorless`（实验性）：SPMSM 反电动势估角 + PLL，不使用 TIM3 转子反馈。需要本电机已整定的 Flash 参数记录。
-- USART3 ASCII 调试命令，连接 PB10/PB11。
-- FDCAN1 classic CAN 控制和遥测，连接 PA11/PA12。
+| 模块 | 路径 | 职责 | 当前验证状态 |
+|---|---|---|---|
+| **STM32 固件** | [`software/firmware`](software/firmware) | STM32G473RC 无堆实时 FOC、Flash 参数双槽持久化、Auto-Tune、UART/CAN 通信 | 主机单测/集成测试与三类后端 ARM 编译通过；**未板级实测** |
+| **物理仿真器** | [`software/foc-sim`](software/foc-sim/README.md) | 独立 `f64` PMSM 电气/机械闭环模型，直接驱动固件 `FocController` 与 `AutoTuneController` | M1 有感基线、物理耦合自整定与实验性无感闭环回归通过；M2 非理想矩阵待完善 |
+| **桌面上位机** | [`software/host-app`](software/host-app/README.md) | Vue 3 + Tauri 2 调试工作台：遥测监控、43 项参数管理、控制权租约、录制导出与自动运行日志 | 前端构建与 Rust 工作区测试通过；**未整机实板联调** |
+| **无线桥接** | [`software/esp32-pc-bridge`](software/esp32-pc-bridge/README.md) | 原生 ESP-IDF C++ 工程：PC 端与电机端串口 ↔ 加密 ESP-NOW 双向桥接 | 主机协议测试与固件构建脚本就绪；**未整机实板联调** |
+| **共享线协议** | [`software/foc-wire`](software/foc-wire) | 固件与上位机共用的 `no_std` v2 帧编解码、CRC 与控制权租约定义 | 随固件与上位机测试一并验证 |
+| **驱动板硬件** | [`hardware/foc-drive`](hardware/foc-drive) / [`hardware/foc-expansion`](hardware/foc-expansion) | 主功率驱动板与扩展板 KiCad 原理图和 PCB（另含 [`foc/foc.ioc`](foc/foc.ioc) CubeMX 参考） | 工程设计阶段；待实板测量验证 |
 
-当前固件采用**纯软件保护**。本轮没有启用 COMP→DAC→TIM1-BRK 硬件过流链。软件保护包括电流阈值/去抖、相电流残差、母线欠压/过压、模型温度和传感器温度、堵转、传感器有效性以及控制超时处理。软件保护不能替代经过验证的硬件关断路径。
+---
 
-## 系统概览
+## 系统架构
+
+### 1. 无线调试与控制链路
 
 ```text
-                    +-----------------------------+
-  编码器 / Hall --->|                             |--> TIM1 互补 PWM
-  相电流 ---------->|       STM32G473RC           |       (100 kHz, 200 ns)
-  VBUS / TMP235 --->|       Rust + Embassy        |--> UCC27211 x3
-  UART ------------>|       FOC 控制器            |--> 070N10NS 级三相桥
-  FDCAN ----------->|                             |<-- INA240A2 x3 + 分流电阻
-                    +-----------------------------+
+  PC 上位机 (FOC Studio)
+      │ USB 串口 (foc-wire v2)
+      ▼
+  ESP32-C3 (pc 桥接)  ◀══ 加密单播 ESP-NOW (PMK/LMK + HMAC) ══▶  ESP32-C3 (motor 桥接)
+                                                                        │ UART (115200 8N1)
+                                                                        ▼
+                                                                 STM32G473RC (USART3)
 ```
 
-固件将高速控制路径与通信路径分离。ADC 帧唤醒电机控制任务；UART 和 CAN 任务通过有界的 Embassy 同步原语交换命令和遥测数据。
+- 上位机真实连接要求 PC 桥接握手并确认 `secure=1`，随后验证 STM32 设备身份与能力。
+- 连接不等于取得控制权：必须显式申请控制权租约并维持心跳，链路超时自动触发停用请求。
+- 上位机内置的浏览器/桌面模拟器仅用于界面与会话验证，**不是**物理电机仿真（物理仿真请使用 `software/foc-sim`）。
 
-上位机的真实设备连接使用 v2 PC 桥接、加密 ESP-NOW 链路和电机端 UART 桥接；连接后需要设备身份握手、控制权申请和心跳。浏览器及桌面模拟器用于界面与会话测试，不是包含真实机械动力学的无感控制仿真。当前没有整机板级联调通过的验证记录。
+### 2. STM32 板级控制闭环
 
-## 仓库结构
+```text
+  Encoder / Hall / 无感估角 ──▶ ┌───────────────────────┐ ──▶ TIM1 互补 PWM (100 kHz, 200 ns*)
+  三相电流 (INA240A2 ×3) ─────▶ │     STM32G473RC       │ ──▶ UCC27211 ×3 → 070N10NS 三相桥
+  VBUS / TMP235 ──────────────▶ │   Rust 2024 + Embassy │
+  USART3 (PB10/PB11) ─────────▶ │  100 kHz 电流 / 1 kHz 速度 │
+  FDCAN1 (PA11/PA12) ─────────▶ └───────────────────────┘
+```
 
-| 路径 | 用途 |
-|---|---|
-| [`software/firmware`](software/firmware) | Rust/Embassy STM32G473RC 固件 |
-| [`software/foc-sim`](software/foc-sim/README.md) | Rust 主机仿真 M1：有感 FOC 与独立 PMSM 电气/机械模型 |
-| [`software/host-app`](software/host-app/README.md) | Vue + Tauri 上位机；监控、参数管理、控制、自整定入口与录制导出 |
-| [`software/esp32-pc-bridge`](software/esp32-pc-bridge/README.md) | 原生 ESP-IDF / ESP32-C3 串口与 ESP-NOW 桥接；替代旧 PlatformIO 工程 |
-| [`software/foc-wire`](software/foc-wire) | 固件与上位机共享的 `no_std` v2 帧协议、CRC 与控制权租约 |
-| [`hardware/foc-drive/FOC2.kicad_pro`](hardware/foc-drive/FOC2.kicad_pro) | 主驱动板 KiCad 工程 |
-| [`hardware/foc-drive/FOC2.kicad_sch`](hardware/foc-drive/FOC2.kicad_sch) | 主驱动板原理图 |
-| [`hardware/foc-drive/FOC2.kicad_pcb`](hardware/foc-drive/FOC2.kicad_pcb) | 主驱动板 PCB 布局 |
-| [`hardware/foc-expansion/foc-ex.kicad_pro`](hardware/foc-expansion/foc-ex.kicad_pro) | 扩展板 KiCad 工程 |
-| [`hardware/foc-expansion/foc-ex.kicad_sch`](hardware/foc-expansion/foc-ex.kicad_sch) | 扩展板原理图 |
-| [`hardware/foc-expansion/foc-ex.kicad_pcb`](hardware/foc-expansion/foc-ex.kicad_pcb) | 扩展板 PCB 布局 |
-| [`foc/foc.ioc`](foc/foc.ioc) | STM32G473 CubeMX 参考配置；不是运行时固件的唯一依据 |
+- 高速控制路径与通信任务解耦：TIM1 TRGO2 触发注入 ADC 采样唤醒电机控制任务；UART 与 CAN 任务通过有界 Embassy 通道交换命令和遥测，不直接操作 PWM。
+- 关键默认参数：100 kHz 中心对齐互补 PWM、200 ns 死区（170 MHz 定时器时钟）、5%–95% 占空比限幅、100 kHz 电流环、1 kHz 速度环。
+- 纯软件保护：过流阈值与去抖、相电流残差、母线欠压/过压、热模型与 TMP235 过温、堵转、传感器有效性与控制超时故障锁存。
+- Flash 双槽持久化：带版本号与 CRC，支持 UART `param ...` 与 CAN 参数帧读写/保存/恢复默认；`autotune start` 可执行 Rs/L/磁链辨识、电流环 PI 阶跃验证及观测器参数生成并落盘。
 
-生成的生产文件、编辑器状态、备份文件和固件二进制文件不属于设计源文件。
+---
 
-## 构建和测试
+## 角度反馈模式（编译期三选一）
+
+通过 Cargo feature 在编译期互斥选择：
+
+| Feature | 反馈方式 | 硬件引脚 | 定位与状态 |
+|---|---|---|---|
+| `sensor-encoder`（默认） | TIM3 正交编码器（QEI） | PB4 / PB5 | 主力有感后端；支持全套模式与自整定 |
+| `sensor-hall` | TIM3 Hall 输入捕获 + 速度插值 | PC6 / PC7 / PC8 | 可选有感后端；支持全套模式与自整定 |
+| `sensorless`（实验性） | SPMSM 反电动势观测器 + PLL | 无（不使用 TIM3） | 实验性无感后端；**仅主机物理仿真验证** |
 
 Windows、Linux、macOS 共用标准库 Python 构建后端，提供 PowerShell 和 Bash 入口。ESP-IDF、编译工具、Python 依赖和缓存默认放在工程 `.tools/`，不修改全局环境。完整步骤见 [STM32 工具说明](software/firmware/README.md) 和 [ESP32 工具说明](software/esp32-pc-bridge/README.md)。
 
@@ -81,53 +82,78 @@ Windows、Linux、macOS 共用标准库 Python 构建后端，提供 PowerShell 
 
 脚本从 STM32 固件目录加载 Cargo 配置，本机测试目标自动检测，不再硬编码 Windows target。保留原生 Cargo 操作时，从仓库根目录构建必须明确加载 `software/firmware/.cargo/config.toml`，只传 `--manifest-path` 不足以保证加载链接脚本。
 
-### 实验性无感固件
+详见 [`software/foc-sim/README.md`](software/foc-sim/README.md) 与 [`docs/sensorless-simulation-plan.md`](docs/sensorless-simulation-plan.md)。
 
-```bash
-cargo build --release --bin foc-firmware --no-default-features --features sensorless
+### 3. 启动上位机（`software/host-app`）
+
+在 `software/host-app` 目录执行：
+
+```powershell
+npm ci
+npm run dev              # 浏览器预览（仅内置模拟器）
+npm run tauri -- dev     # 桌面开发模式（支持串口扫描、C3 加密桥接与自动日志）
+npm run build            # 前端类型检查与生产构建
+cargo test --locked --workspace
 ```
 
-- 面向近似 `Ld=Lq` 的 SPMSM，从静止轻载起步。共用有感版本的 ADC 校准、保护、电流/速度 PI 和 SVPWM；区别是角度来源和起动过程。**不支持零速带载保持、飞车接管和不停机跨零反转，也没有 HFI。**
-- 换电机要换参数，不换算法。当前实板参数入口是**先用编码器或 Hall 版整定同一台电机，保留电机参数 Flash 槽，再换无感固件**。核对极对数、限流和实际生效的 PI（速度 PI 不会自动辨识，应低于估算器带宽）。极对数不符、记录缺失或不兼容会拒绝使能；记录不能识别物理上换了电机。仅有三根相线且无已知档案时，当前没有从零自动辨识全套参数的路径。
-- 校准结束后先设置非零同方向目标，再使能对应的 `current` 或 `velocity` 模式。速度目标单位为机械 rad/s，乘极对数后须处于接管速度以上且低于估算器工作上限。零目标或 `disable` 停用；换向前先停用并等待电机静止。无感版不接受 `enable open` 或有感 `autotune start`。
-- 启动时限流对齐和拖动，通过反电动势幅值、PLL 相位误差、方向和同步速度的持续检查后才混合切换。未接管时遥测 `sensor_valid=false`；机械角是相对角，不是绝对轴位置。启动超时或持续失锁锁存 SENSOR 故障并关桥，不自动重试。
-- **仅有主机仿真验证。** 电压重构假设 PWM 指令有一个周期的锁存延迟、采样区间内母线近似不变；实板须验证时序、死区电压误差、采样质量及 10 µs 最坏耗时。在有感台架对照角度后，再考虑无感带电试车。
+详见 [`software/host-app/README.md`](software/host-app/README.md)。
 
-固件 `.cargo/config.toml` 配置了 `thumbv7em-none-eabihf`、`link.x`、`defmt.x` 以及针对 STM32G473RC 的 `probe-rs` 烧录运行器。烧录需要正确连接且获得授权的调试探针；本文档不会执行烧录操作。
+### 4. 构建 ESP32-C3 无线桥接（`software/esp32-pc-bridge`）
 
-## 软件仿真计划
+在 `software/esp32-pc-bridge` 目录执行（原生 ESP-IDF，不使用 PlatformIO/Arduino）：
 
-[无感 FOC 软件仿真实施方案](docs/sensorless-simulation-plan.md) 定义了独立 Rust 电机模型、现有固件闭环接入、非理想因素、旁路观测器及无感接管的阶段和验收标准。[主机仿真 M1](software/foc-sim/README.md) 已实现有感物理闭环基线和使用实际转子动力学的自整定参数验证，另外新增了实验性无感控制及独立物理模型回归；完整非理想场景矩阵、旁路验收与实板验证仍未完成；当前上位机模拟器和自整定流程测试不代表完整的无感物理仿真。
+```powershell
+.\setup.ps1                              # 安装本地 ESP-IDF 工具链（已有 SDK 可传 -IdfPath）
+.\build.ps1 -Variant pc -Action menuconfig
+.\build.ps1 -Variant motor -Action menuconfig
+.\build.ps1 -Variant pc
+.\build.ps1 -Variant motor
+.\build.ps1 -Action test                 # 主机 C++/Python 协议测试（无需 ESP-IDF）
+```
+
+详见 [`software/esp32-pc-bridge/README.md`](software/esp32-pc-bridge/README.md)。
+
+---
 
 ## 硬件概要
 
-主驱动设计基于以下器件和目标：
+主驱动板（[`hardware/foc-drive/FOC2.kicad_pro`](hardware/foc-drive/FOC2.kicad_pro)）与扩展板（[`hardware/foc-expansion/foc-ex.kicad_pro`](hardware/foc-expansion/foc-ex.kicad_pro)）关键器件与设计目标如下：
 
-- STM32G473RC，170 MHz Cortex-M4F 电机控制 MCU。
-- 三个 UCC27211 半桥栅极驱动器。
-- 六个 100 V 级 N 沟道 MOSFET 位置，组成三相桥。
-- 三个 INA240A2 双向电流采样放大器。
-- 三个 0.5 mΩ、带 Kelvin 引线的分流电阻。
-- 面向 2S–6S 电池的母线设计目标，约 5.5–25.2 V。
-- VBUS 分压采样和 TMP235 模拟温度传感器。
-- USART3、FDCAN1、SWD、编码器、Hall 和扩展接口。
+| 单元 | 器件 / 规格目标 |
+|---|---|
+| 主控 MCU | STM32G473RC（170 MHz Cortex-M4F） |
+| 栅极驱动 | UCC27211 半桥驱动 ×3 |
+| 功率级 | 100 V 级 N-MOSFET（070N10NS 级）×6 组成三相桥 |
+| 电流采样 | INA240A2 双向电流放大器 ×3 + 0.5 mΩ Kelvin 分流电阻 ×3 |
+| 母线与传感 | 2S–6S 电池目标（约 5.5–25.2 V）、VBUS 分压采样、TMP235 模拟温度传感器 |
+| 通信与接口 | USART3（PB10/PB11）、FDCAN1（PA11/PA12）、SWD、编码器（PB4/PB5）、Hall（PC6–PC8）、扩展接口 |
 
-器件额定值、热限制、自举电路尺寸、开关损耗和电流能力在实际装配电路板完成测量前都只是工程目标。详细计算和待解决问题见开发机上的本地设计说明；该文件有意不纳入共享仓库。
+器件额定值、热限制、自举尺寸与开关损耗在实板测量前均为工程目标；[`foc/foc.ioc`](foc/foc.ioc) 仅作 CubeMX 引脚参考，运行时以 Rust 固件源码为准。本地详细计算文档有意不纳入仓库。
 
-## 验证状态和限制
+---
 
-软件构建和主机测试覆盖了当前实现，但不能证明功率级运行安全。在加电连接电机之前：
+## 上板前验证清单
 
-1. 检查已装配电路板，确认器件安装、极性、间距、接地和 Kelvin 电流路径正确。
-2. 在功率级未上电时，检查全部六路 PWM 波形、互补极性、空闲行为、MOE 关断和实测死区时间。
-3. 使用低电压限流电源，验证 ADC 偏置、电流极性/比例、VBUS 比例、温度换算、转子方向和电角度零点对齐。
-4. 通过受控故障注入逐项执行软件保护测试。
-5. 根据 10 µs PWM 周期测量控制环最坏执行时间。
-6. 在逐步增加负载的过程中测量栅极驱动器、MOSFET、分流电阻和电路板温度。
-7. 在目标物理接线下确认 UART 和 CAN 行为。
+软件测试和主机仿真无法证明功率级安全。首次上电与带电机运行前须逐项完成：
 
-因此，100 kHz 只是配置的运行目标，并不代表已证明装配后的硬件可以长期连续运行在该频率。如果时序、开关损耗、EMI、自举刷新或热测试结果不可接受，应降低集中配置中的 PWM 频率并重新进行全部验证。
+1. **装联与绝缘检查**：核对器件极性、焊接、爬电间距、接地及分流电阻 Kelvin 走线。
+2. **无功率级门极检查**：功率母线不上电，示波器确认六路互补 PWM 极性、空闲状态、MOE 关断与实测死区（约 200 ns）。
+3. **低压限流标定**：接入低压限流电源，校验 ADC 偏置、相电流极性与比例、VBUS 比例、温度换算、转子方向与电角度零点。
+4. **软件保护注入**：受控条件下逐项触发并确认过流、残差、欠压/过压、过温、堵转与传感器故障锁存。
+5. **实时性测量（WCET）**：使用 DWT 测量控制中断与主控制环最坏执行时间，确认满足 10 µs 周期（100 kHz）。
+6. **温升与损耗评估**：逐步加载，实测 MOSFET、栅极驱动、分流电阻与板面温度；若 WCET 或热损耗超标，应将集中配置中的 PWM 频率降至 40 kHz 或 20 kHz 并重新回归全部验证。
+7. **通信联调**：在目标物理接线下验收 UART、FDCAN 及 ESP32-C3 加密无线链路。
 
-## 许可证和贡献状态
+---
 
-固件 crate 声明采用 `MIT OR Apache-2.0` 许可证，仓库根目录的 [`LICENSE`](LICENSE) 为 MIT 许可证。本项目目前仍处于积极的工程开发阶段；在将改动视为可发布版本之前，应结合硬件设计进行审查，并在目标电路板上完成验证。
+## 文档索引
+
+- 固件软件设计基线：[`docs/software-design.md`](docs/software-design.md)
+- 无感 FOC 软件仿真方案：[`docs/sensorless-simulation-plan.md`](docs/sensorless-simulation-plan.md)
+- 主机物理仿真说明：[`software/foc-sim/README.md`](software/foc-sim/README.md)
+- 桌面上位机说明：[`software/host-app/README.md`](software/host-app/README.md)
+- ESP32-C3 无线桥接说明：[`software/esp32-pc-bridge/README.md`](software/esp32-pc-bridge/README.md)
+
+## 许可证
+
+仓库根目录采用 MIT 许可证（见 [`LICENSE`](LICENSE)），固件与协议 crate 声明为 `MIT OR Apache-2.0`。本项目处于工程开发阶段，投入实际使用前应完成硬件复核与实板验证。

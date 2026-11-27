@@ -1,3 +1,5 @@
+mod run_log;
+
 use device_foc::{Batch, ParameterDescriptor, Parameters, Session, Snapshot};
 use tauri::{ipc::Channel, Manager, State};
 use tokio::sync::Mutex;
@@ -66,9 +68,10 @@ async fn save_export(
     if contents.len() > 16 * 1024 * 1024 {
         return Err("导出内容超过 16 MB".into());
     }
-    let ext = match kind.as_str() {
-        "csv" => "csv",
-        "json" => "json",
+    let (ext, stem) = match kind.as_str() {
+        "csv" => ("csv", "foc-telemetry"),
+        "json" => ("json", "foc-parameters"),
+        "log" => ("log", "foc-studio"),
         _ => return Err("不支持的导出类型".into()),
     };
     let directory = app.path().download_dir().map_err(|e| e.to_string())?;
@@ -78,11 +81,6 @@ async fn save_export(
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|e| e.to_string())?
             .as_secs();
-        let stem = if ext == "csv" {
-            "foc-telemetry"
-        } else {
-            "foc-parameters"
-        };
         let mut path = directory.join(format!("{stem}-{stamp}.{ext}"));
         let mut suffix = 1;
         while path.exists() {
@@ -109,6 +107,10 @@ async fn discover() -> Result<Vec<host_transport::Endpoint>, String> {
 pub fn run() {
     tauri::Builder::default()
         .manage(Store::default())
+        .setup(|app| {
+            app.manage(run_log::RunLog::init(app));
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             connect,
             disconnect,
@@ -120,8 +122,16 @@ pub fn run() {
             export_csv,
             save_export,
             touch,
-            discover
+            discover,
+            run_log::log_file_path,
+            run_log::append_log,
+            run_log::open_log_folder
         ])
-        .run(tauri::generate_context!())
-        .expect("启动 FOC Studio 失败");
+        .build(tauri::generate_context!())
+        .expect("启动 FOC Studio 失败")
+        .run(|app, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                app.state::<run_log::RunLog>().finish();
+            }
+        });
 }
