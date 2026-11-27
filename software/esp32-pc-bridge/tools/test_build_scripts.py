@@ -107,6 +107,7 @@ class BuildScriptTests(unittest.TestCase):
 
     def test_activation_reuses_python_despite_foreign_path_and_env(self):
         with patch.dict(os.environ, {'PYTHONPATH': '/foreign', 'PYTHONHOME': '/foreign',
+                                    'MSYSTEM': 'MINGW64',
                                     'IDF_PYTHON_ENV_PATH': '/foreign',
                                     'PIP_TARGET': '/foreign', 'PIP_CONFIG_FILE': '/foreign'}):
             before = os.environ.copy()
@@ -114,6 +115,7 @@ class BuildScriptTests(unittest.TestCase):
             self.assertEqual(os.environ, before)
         self.assertNotIn('PYTHONPATH', env)
         self.assertNotIn('PYTHONHOME', env)
+        self.assertNotIn('MSYSTEM', env)
         self.assertNotIn('PIP_TARGET', env)
         self.assertEqual(env['PIP_CONFIG_FILE'], os.devnull)
         self.assertEqual(env['PIP_REQUIRE_VIRTUALENV'], '1')
