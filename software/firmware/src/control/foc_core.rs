@@ -514,15 +514,15 @@ impl FocController {
             | MotorState::Running(mode) => mode,
             | _ => ControlMode::Idle,
         };
-        let electrical_angle = match mode {
-            | ControlMode::OpenLoop => {
+        let electrical_angle = match (mode, guidance) {
+            | (ControlMode::OpenLoop, _) => {
                 self.open_loop_angle = normalize_angle(
                     self.open_loop_angle + self.open_loop_velocity * dt,
                 );
                 self.open_loop_angle
             },
-            | _ if let Some(g) = guidance => g.angle,
-            | _ => normalize_angle(
+            | (_, Some(g)) => g.angle,
+            | (_, None) => normalize_angle(
                 self.config.sensor_direction
                     * self.config.pole_pairs as f32
                     * rotor.mechanical_angle
@@ -1011,6 +1011,65 @@ mod tests {
                 (config.minimum_duty..=config.maximum_duty).contains(&duty)
             );
         }
+    }
+
+    #[test]
+    fn physical_angle_applies_direction_pole_pairs_and_zero() {
+        let (mut controller, config, sequence) = calibrated_controller();
+        controller.config.sensor_direction = -1.0;
+        controller.config.pole_pairs = 7;
+        controller.config.electrical_zero = 0.43;
+        controller.handle_command(Command::Enable(ControlMode::Current));
+        let mut frame = raw(sequence + 1, 2_048, 24.0, config);
+        frame.phase_a += 10;
+        frame.phase_b -= 4;
+        frame.phase_c -= 6;
+        let angle = 0.37;
+        let output = controller.step(
+            frame,
+            RotorSample {
+                mechanical_angle: angle,
+                mechanical_velocity: 0.0,
+                valid: true,
+            },
+        );
+        assert!(output.bridge_enabled);
+        let expected = park(
+            clarke(output.telemetry.currents),
+            normalize_angle(-7.0 * angle - 0.43),
+        );
+        assert!((output.telemetry.current_dq.d - expected.d).abs() < 1e-6);
+        assert!((output.telemetry.current_dq.q - expected.q).abs() < 1e-6);
+    }
+
+    #[test]
+    fn open_loop_angle_ignores_physical_angle_and_wraps() {
+        let (mut controller, config, sequence) = calibrated_controller();
+        controller.handle_command(Command::Enable(ControlMode::OpenLoop));
+        controller.open_loop_angle = core::f32::consts::TAU - 0.001;
+        controller.open_loop_velocity = 200.0;
+        let expected_angle = normalize_angle(
+            controller.open_loop_angle
+                + controller.open_loop_velocity
+                    / config.pwm_frequency_hz as f32,
+        );
+        let mut frame = raw(sequence + 1, 2_048, 24.0, config);
+        frame.phase_a += 10;
+        frame.phase_b -= 4;
+        frame.phase_c -= 6;
+        let output = controller.step(
+            frame,
+            RotorSample {
+                mechanical_angle: 1.23,
+                mechanical_velocity: 0.0,
+                valid: true,
+            },
+        );
+        assert!(output.bridge_enabled);
+        assert!((controller.open_loop_angle - expected_angle).abs() < 1e-6);
+        let expected = park(clarke(output.telemetry.currents), expected_angle);
+        assert!((output.telemetry.current_dq.d - expected.d).abs() < 1e-6);
+        assert!((output.telemetry.current_dq.q - expected.q).abs() < 1e-6);
     }
 
     #[test]

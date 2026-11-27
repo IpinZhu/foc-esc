@@ -64,52 +64,23 @@
 | `sensor-hall` | TIM3 Hall 输入捕获 + 速度插值 | PC6 / PC7 / PC8 | 可选有感后端；支持全套模式与自整定 |
 | `sensorless`（实验性） | SPMSM 反电动势观测器 + PLL | 无（不使用 TIM3） | 实验性无感后端；**仅主机物理仿真验证** |
 
-### 实验性无感模式（`sensorless`）说明与边界
+Windows、Linux、macOS 共用标准库 Python 构建后端，提供 PowerShell 和 Bash 入口。ESP-IDF、编译工具、Python 依赖和缓存默认放在工程 `.tools/`，不修改全局环境。完整步骤见 [STM32 工具说明](software/firmware/README.md) 和 [ESP32 工具说明](software/esp32-pc-bridge/README.md)。
 
-- **适用范围：** 面向近似表贴式 SPMSM（$L_d \approx L_q$，偏差 $\le 15\%$），静止轻载起步与中高速运行。**不支持** HFI、零速带载保持、飞车接管（旋转中切入）和不停机平滑跨零反转。
-- **参数前提（Fail-closed）：** 换电机不换算法但必须匹配参数。当前实板入口为**先刷编码器或 Hall 固件完成同一电机的 `autotune` 并写入 Flash，再刷入无感固件**。缺失档案、极对数不符或离散稳定性不满足时拒绝使能；目前不支持仅接三根相线从零自动辨识全套参数。速度环 PI 不会自动整定，需保证带宽低于观测器带宽。
-- **启停规则：** 校准完成后先设非零目标再使能 `current` 或 `velocity`（速度目标为机械 rad/s，乘极对数后须位于接管速度与工作上限之间）。启动顺序为限流对齐 → 强拖 + 反电动势阻尼 → 混合切入 → 闭环。设 0 或 `disable` 停机；换向前须先停机并等待静止。不接受 `enable open` 与有感 `autotune start`；超时或持续失锁会锁存 `SENSOR` 故障并关桥，不自动重试。
-- **验证边界：** 目前仅通过主机 `foc-sim` 物理闭环回归（含 72 组标称起步网格）。实板必须单独验证 PWM 锁存延迟假设、死区电压误差、ADC 采样噪声以及 10 µs 周期内的最坏执行时间（WCET）；建议先在有感台架对比角度后再评估带电试车。
+以下分别在对应固件目录执行：
 
----
+| 操作 | Linux / macOS | Windows PowerShell |
+|---|---|---|
+| STM32 编码器构建 | `bash ./build.sh --sensor encoder` | `.\build.ps1 -Sensor encoder` |
+| STM32 Hall 构建 | `bash ./build.sh --sensor hall` | `.\build.ps1 -Sensor hall` |
+| STM32 无感构建 | `bash ./build.sh --sensor sensorless` | `.\build.ps1 -Sensor sensorless` |
+| STM32 本机测试 | `bash ./build.sh --action test` | `.\build.ps1 -Action test` |
+| ESP32 本地 SDK 安装 | `bash ./setup.sh` | `.\setup.ps1` |
+| ESP32 PC 角色构建 | `bash ./build.sh --variant pc` | `.\build.ps1 -Variant pc` |
+| ESP32 电机角色构建 | `bash ./build.sh --variant motor` | `.\build.ps1 -Variant motor` |
 
-## 快速开始
+普通构建不接触硬件。烧录是单独显式操作，STM32 必须指定 probe，ESP32 必须指定串口；具体命令见各工具说明。STM32 各传感器产物独立，脚本检查 ELF 应用区并禁止整片擦除路径，保留切换无感所需的参数页。
 
-以下命令默认在 Windows 环境下执行；固件默认 target 为 `thumbv7em-none-eabihf`，**主机端测试务必显式指定 `--target x86_64-pc-windows-msvc`**，避免意外触发 `probe-rs` 烧录运行器。
-
-### 1. 固件测试与编译
-
-在 `software/firmware` 目录执行：
-
-```powershell
-# 主机端格式检查、单测与集成测试（不驱动真实硬件）
-cargo fmt -- --check
-cargo test --target x86_64-pc-windows-msvc
-cargo clippy --target x86_64-pc-windows-msvc --test fault_protection --test fault_recovery_and_diagnostics -- -D warnings
-
-# 编译 STM32G473RC 固件（三选一）
-cargo build --release --bin foc-firmware                                             # Encoder（默认）
-cargo build --release --bin foc-firmware --no-default-features --features sensor-hall # Hall
-cargo build --release --bin foc-firmware --no-default-features --features sensorless  # 无感（实验性）
-```
-
-> 若从仓库根目录调用 ARM 构建，请显式加上 `--config "software/firmware/.cargo/config.toml"`，确保正确加载 `link.x` 与 `defmt.x`。
-
-### 2. 运行主机物理仿真（`software/foc-sim`）
-
-在仓库根目录执行：
-
-```powershell
-# 全量仿真测试（有感闭环、能量/时序不变量、自整定、无感基础回归）
-cargo test --locked --manifest-path software/foc-sim/Cargo.toml --target x86_64-pc-windows-msvc
-
-# 运行单场景 CLI（可附加 --csv / --json 输出波形与报告）
-cargo run --release --locked --manifest-path software/foc-sim/Cargo.toml --target x86_64-pc-windows-msvc -- speed
-cargo run --release --locked --manifest-path software/foc-sim/Cargo.toml --target x86_64-pc-windows-msvc -- autotune
-
-# 无感 72 组标称起步网格验收（12 初始电角 × 正反向 × 3 档轻载）
-cargo test --release --locked --manifest-path software/foc-sim/Cargo.toml --target x86_64-pc-windows-msvc --test sensorless nominal_start_grid -- --ignored
-```
+脚本从 STM32 固件目录加载 Cargo 配置，本机测试目标自动检测，不再硬编码 Windows target。保留原生 Cargo 操作时，从仓库根目录构建必须明确加载 `software/firmware/.cargo/config.toml`，只传 `--manifest-path` 不足以保证加载链接脚本。
 
 详见 [`software/foc-sim/README.md`](software/foc-sim/README.md) 与 [`docs/sensorless-simulation-plan.md`](docs/sensorless-simulation-plan.md)。
 
