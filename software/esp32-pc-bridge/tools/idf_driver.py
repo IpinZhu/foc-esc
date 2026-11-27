@@ -71,7 +71,7 @@ def local_env(project, sdk, tools, python_env=None):
     env = os.environ.copy()
     for key in ('PYTHONHOME', 'PYTHONPATH', 'IDF_PYTHON_ENV_PATH', 'IDF_PATH', 'IDF_TOOLS_PATH',
                 'IDF_DEACTIVATE_FILE_PATH', 'IDF_TOOLS_EXPORT_CMD', 'IDF_TOOLS_INSTALL_CMD',
-                'PIP_TARGET', 'PIP_PREFIX', 'PIP_USER', 'PYTHONUSERBASE'):
+                'PIP_TARGET', 'PIP_PREFIX', 'PIP_USER', 'PYTHONUSERBASE', 'MSYSTEM'):
         env.pop(key, None)
     local = project / '.tools'
     for name, directory in (('PIP_CACHE_DIR', 'cache/pip'), ('XDG_CACHE_HOME', 'cache'),
